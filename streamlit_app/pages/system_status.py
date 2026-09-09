@@ -1,5 +1,6 @@
 """System & Pipeline Status Page - Data Engineering Batch Operations."""
 import streamlit as st
+from aml_app.config.settings import settings
 from aml_app.services.data_service import data_service
 
 def render_system_status():
