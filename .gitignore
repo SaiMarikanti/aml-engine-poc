@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+
+# Streamlit secrets
+.streamlit/secrets.toml
+!.streamlit/secrets.toml.example
+
+# Test/cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Data files
+*.csv
+*.json
+*.parquet
+
+# Databricks/local storage artifacts
+_delta_log/
+checkpoints/
+checkpoint/
+*.delta
+
+# Generated deployment artifacts
+*.zip
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# Local deployment scratch/clones
+aml-investigation-app/
+aml-test/
+aml-repo-clone/

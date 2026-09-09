@@ -1,0 +1,248 @@
+/* Neumorphic Design System for AML Investigation Platform
+   Palette:
+   - Base / Surface: #E8ECF1
+   - Text Primary: #20242A
+   - Text Secondary: #68707A
+   - Text Muted: #9AA0A6
+   - Accents / Risk States:
+       LOW: #059669 (Soft Emerald)
+       MEDIUM: #D97706 (Amber)
+       HIGH: #DC2626 (Crimson Red)
+       CRITICAL: #991B1B (Dark Wine)
+       PRIMARY ACCENT: #1E3A8A (Deep Navy Blue)
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg-base: #E8ECF1;
+  --bg-surface: #E8ECF1;
+  --shadow-light: #ffffff;
+  --shadow-dark: #c8ced6;
+  --shadow-darker: #b5bcc6;
+  
+  --text-main: #20242A;
+  --text-secondary: #68707A;
+  --text-muted: #9AA0A6;
+  
+  --color-primary: #1E3A8A;
+  --color-low: #059669;
+  --color-med: #D97706;
+  --color-high: #DC2626;
+  --color-critical: #991B1B;
+}
+
+/* Base Body Styles */
+.stApp {
+  background-color: var(--bg-base) !important;
+  color: var(--text-main) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+/* Hide default streamlit headers and footers for clean desktop app feel */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header[data-testid="stHeader"] {
+  background-color: transparent !important;
+}
+
+/* Neumorphic Surfaces */
+.neo-card {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease;
+  margin-bottom: 18px;
+}
+
+.neo-card:hover {
+  box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+}
+
+.neo-card-sm {
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 12px;
+}
+
+.neo-card-inset {
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+  padding: 16px;
+  border: none;
+}
+
+/* Metric / KPI styling */
+.neo-kpi-container {
+  display: flex;
+  flex-direction: column;
+}
+.neo-kpi-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.neo-kpi-value {
+  font-size: 2.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.1;
+  font-family: 'Inter', sans-serif;
+}
+.neo-kpi-delta {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 6px;
+}
+
+/* Neumorphic Sidebar */
+section[data-testid="stSidebar"] {
+  background-color: #E2E7ED !important;
+  border-right: 1px solid #d4dae2;
+  box-shadow: 4px 0px 14px rgba(180, 188, 198, 0.4);
+}
+
+section[data-testid="stSidebar"] .block-container {
+  padding-top: 1.5rem;
+}
+
+.neo-nav-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 12px 10px 4px 10px;
+}
+
+/* Badges & Risk Chips (High Contrast & Flat for Legibility) */
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.risk-low {
+  background-color: #D1FAE5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.risk-medium {
+  background-color: #FEF3C7;
+  color: #92400E;
+  border: 1px solid #FDE68A;
+}
+
+.risk-high {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.risk-critical {
+  background-color: #7F1D1D;
+  color: #FFFFFF;
+  border: 1px solid #5C1414;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-open {
+  background-color: #E0E7FF;
+  color: #3730A3;
+}
+
+.status-review {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.status-confirmed {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+}
+
+.status-false_positive {
+  background-color: #E5E7EB;
+  color: #4B5563;
+}
+
+.status-closed {
+  background-color: #D1FAE5;
+  color: #047857;
+}
+
+/* Top App Header Banner */
+.neo-top-bar {
+  background: var(--bg-surface);
+  border-radius: 14px;
+  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Evidence Cards */
+.evidence-card {
+  background: var(--bg-surface);
+  border-radius: 14px;
+  box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  padding: 16px;
+  border-left: 4px solid var(--color-primary);
+  margin-bottom: 12px;
+}
+
+.evidence-card.triggered {
+  border-left: 4px solid var(--color-high);
+}
+
+/* Code / Monospace text */
+.code-pill {
+  font-family: 'JetBrains Mono', monospace;
+  background: #DFE4EA;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.85em;
+  color: #1F2937;
+}
+
+/* Breadcrumbs */
+.neo-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+.neo-breadcrumbs a {
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
