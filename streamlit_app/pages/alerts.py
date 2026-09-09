@@ -43,13 +43,18 @@ def render_alerts():
         min_risk = st.slider("Minimum Risk Score", min_value=0.0, max_value=1.0, value=0.0, step=0.05)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    df_alerts, total = data_service.get_alerts(
-        status=status_filter,
-        detection_engine=engine_filter,
-        min_risk=min_risk if min_risk > 0 else None,
-        limit=30,
-        offset=0
-    )
+    try:
+        df_alerts, total = data_service.get_alerts(
+            status=status_filter,
+            detection_engine=engine_filter,
+            min_risk=min_risk if min_risk > 0 else None,
+            limit=30,
+            offset=0
+        )
+    except Exception as e:
+        st.error(f"Unable to load alerts: Databricks SQL query failed ({e}). Check the System Status page for connection details.")
+        df_alerts = pd.DataFrame()
+        total = 0
 
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">

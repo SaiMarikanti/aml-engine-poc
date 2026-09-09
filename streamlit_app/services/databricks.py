@@ -73,15 +73,29 @@ class DatabricksService:
         try:
             with self._get_connection() as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT current_catalog() AS catalog, current_schema() AS schema")
+                    cursor.execute("SELECT current_catalog() AS catalog, current_schema() AS schema, current_user() AS current_user")
                     row = cursor.fetchone()
                     if row:
-                        cat, sch = row[0], row[1]
-                        return True, f"Connected to Databricks SQL Warehouse! Active Namespace: {cat}.{sch}"
+                        cat, sch, usr = row[0], row[1], row[2]
+                        return True, f"Connected to Databricks SQL Warehouse! Active Namespace: {cat}.{sch} (Identity: {usr})"
             return False, "No response from Databricks SQL Warehouse."
         except Exception as e:
             logger.error(f"Databricks connection check failed: {e}")
             return False, f"Connection failed: {str(e)}"
+
+    def get_identity_info(self) -> Dict[str, str]:
+        """Fetch current_catalog(), current_schema(), and current_user() from Databricks."""
+        try:
+            df = self.execute_query("SELECT current_catalog() AS catalog, current_schema() AS schema, current_user() AS identity")
+            if not df.empty:
+                return {
+                    "catalog": str(df.iloc[0].get("catalog", self.catalog)),
+                    "schema": str(df.iloc[0].get("schema", self.schema)),
+                    "identity": str(df.iloc[0].get("identity", "Service Principal / User"))
+                }
+        except Exception as e:
+            logger.warning(f"Could not query identity: {e}")
+        return {"catalog": self.catalog, "schema": self.schema, "identity": "Unverified"}
 
     def execute_query(self, query: str, params: Optional[Dict[str, Any] | Tuple[Any, ...]] = None) -> pd.DataFrame:
         """Execute parameterized SQL query and return a Pandas DataFrame."""
@@ -93,11 +107,27 @@ class DatabricksService:
                     else:
                         cursor.execute(query)
                     
-                    columns = [desc[0] for desc in cursor.description] if cursor.description else []
-                    rows = cursor.fetchall()
-                    return pd.DataFrame(rows, columns=columns)
+                    if cursor.description:
+                        columns = [desc[0] for desc in cursor.description]
+                        rows = cursor.fetchall()
+                        return pd.DataFrame(rows, columns=columns)
+                    return pd.DataFrame()
         except Exception as e:
             logger.error(f"Databricks SQL Execution error: {e} | Query: {query}")
+            raise
+
+    def execute_statement(self, statement: str, params: Optional[Dict[str, Any] | Tuple[Any, ...]] = None) -> bool:
+        """Execute DDL/DML statement (CREATE, INSERT, UPDATE, MERGE) without returning a dataframe."""
+        try:
+            with self._get_connection() as connection:
+                with connection.cursor() as cursor:
+                    if params:
+                        cursor.execute(statement, parameters=params)
+                    else:
+                        cursor.execute(statement)
+            return True
+        except Exception as e:
+            logger.warning(f"Databricks DDL/DML execution notice: {e} | Statement: {statement}")
             raise
 
     def get_tables(self) -> List[str]:

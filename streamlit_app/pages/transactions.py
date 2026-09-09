@@ -58,16 +58,21 @@ def render_transactions():
 
     # Execute Search
     limit = 25
-    df, total_matches = data_service.search_transactions(
-        tx_id=parsed_tx,
-        sender_id=parsed_sender,
-        receiver_id=parsed_recv,
-        min_amount=parsed_min,
-        max_amount=parsed_max,
-        is_fraud_only=is_fraud,
-        limit=limit,
-        offset=0
-    )
+    try:
+        df, total_matches = data_service.search_transactions(
+            tx_id=parsed_tx,
+            sender_id=parsed_sender,
+            receiver_id=parsed_recv,
+            min_amount=parsed_min,
+            max_amount=parsed_max,
+            is_fraud_only=is_fraud,
+            limit=limit,
+            offset=0
+        )
+    except Exception as e:
+        st.error(f"Unable to load transaction data: Databricks SQL query failed ({e}). Check the System Status page for connection details.")
+        df = pd.DataFrame()
+        total_matches = 0
 
     st.markdown(f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">

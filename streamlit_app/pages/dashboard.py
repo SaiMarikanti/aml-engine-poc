@@ -23,7 +23,12 @@ def render_dashboard():
     """, unsafe_allow_html=True)
 
     # 1. KPI Cards Row
-    kpis = data_service.get_kpi_summary()
+    try:
+        kpis = data_service.get_kpi_summary()
+    except Exception as e:
+        st.warning(f"⚠️ Unable to load surveillance metrics: Databricks SQL query failed ({e}). Please verify connection on the System Status page.")
+        kpis = {"total_transactions": 0, "total_alerts": 0, "high_risk_alerts": 0, "open_cases": 0, "suspicious_volume": 0.0}
+
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         render_kpi_card("Total Transactions", format_number(kpis["total_transactions"]), "+4.2% from last cycle", trend_positive=True)

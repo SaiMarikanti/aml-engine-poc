@@ -47,9 +47,11 @@ def render_system_status():
     with col1:
         st.markdown(f"""
             <div style="font-size: 0.88rem; color: #20242A; line-height: 1.8;">
-                <b>Target Catalog:</b> <code>{settings.DATABRICKS_CATALOG}</code> &nbsp;|&nbsp; <b>Schema:</b> <code>{settings.DATABRICKS_SCHEMA}</code><br>
+                <b>Target Catalog:</b> <code>{backend_info.get('catalog', settings.DATABRICKS_CATALOG)}</code> &nbsp;|&nbsp; 
+                <b>Target Schema:</b> <code>{backend_info.get('schema', settings.DATABRICKS_SCHEMA)}</code><br>
+                <b>Authenticated Identity:</b> <code>{backend_info.get('identity', 'Databricks App Service Principal')}</code><br>
                 <b>Warehouse Resource:</b> <code>{settings.DATABRICKS_WAREHOUSE_ID or 'Serverless Starter Warehouse'}</code><br>
-                <b>Authentication:</b> {'Databricks App OAuth Service Principal / Resource Binding' if settings.is_cloud_configured else 'Local Development Adapter'}
+                <b>Persistence Mode:</b> <span class="status-chip status-closed" style="font-size: 0.78rem;">{backend_info.get('persistence_mode', 'Active')}</span>
             </div>
         """, unsafe_allow_html=True)
     with col2:
@@ -64,6 +66,9 @@ def render_system_status():
             success, msg = databricks_service.test_connection()
             if success:
                 st.success(f"✓ {msg}")
+                # Query explicit identity
+                ident = databricks_service.get_identity_info()
+                st.info(f"**Live Identity Check:** Catalog: `{ident['catalog']}` | Schema: `{ident['schema']}` | User / Service Principal: `{ident['identity']}`")
             else:
                 st.warning(f"Connection Notice: {msg}")
 
