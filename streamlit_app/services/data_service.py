@@ -1,10 +1,11 @@
 """Unified Data Service Facade for AML Investigation Platform.
-Routes cleanly to DatabricksRepository in production or LocalRepository in local/test mode.
-Eliminates architectural inconsistencies and guarantees deterministic calculations.
+Routes cleanly to DatabricksRepository in production (Databricks Apps) or LocalRepository in local/test mode.
 """
+import os
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
+from aml_app.config.settings import settings
 from aml_app.services.databricks import DatabricksService
 from aml_app.services.repository_base import RepositoryBase
 from aml_app.services.local_repository import LocalRepository
@@ -14,17 +15,42 @@ databricks_service = DatabricksService()
 
 class AMLDataService:
     def __init__(self):
-        if databricks_service.is_configured():
+        mode = os.getenv("AML_MODE", "databricks").lower()
+        
+        # Explicit local override
+        if mode == "local":
+            self.repo: RepositoryBase = LocalRepository()
+        elif settings.is_databricks_app_runtime:
+            # Running inside Databricks Apps container: ALWAYS use DatabricksRepository
+            self.repo: RepositoryBase = DatabricksRepository(databricks_service)
+        elif databricks_service.is_configured():
+            # Configured with host & credentials
             self.repo: RepositoryBase = DatabricksRepository(databricks_service)
         else:
+            # Offline local developer workstation fallback
             self.repo: RepositoryBase = LocalRepository()
 
     @property
     def is_cloud_mode(self) -> bool:
-        return databricks_service.is_configured()
+        return isinstance(self.repo, DatabricksRepository)
 
     def get_system_backend_info(self) -> Dict[str, str]:
         return self.repo.get_backend_info()
+
+    def get_discovered_tables(self) -> List[str]:
+        if isinstance(self.repo, DatabricksRepository):
+            return self.repo.get_available_tables()
+        return ["gold_alerts", "gold_transactions", "gold_accounts", "gold_network", "app_alert_status", "app_alert_comments", "app_audit_log"]
+
+    def describe_table(self, table_name: str) -> pd.DataFrame:
+        if isinstance(self.repo, DatabricksRepository):
+            return self.repo.client.describe_table(table_name)
+        return pd.DataFrame([{"col_name": "N/A", "data_type": "N/A", "comment": "Local mode"}])
+
+    def get_sample_rows(self, table_name: str, limit: int = 10) -> pd.DataFrame:
+        if isinstance(self.repo, DatabricksRepository):
+            return self.repo.client.execute_query(f"SELECT * FROM {settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}.{table_name} LIMIT {limit}")
+        return pd.DataFrame()
 
     def get_kpi_summary(self) -> Dict[str, Any]:
         return self.repo.get_kpi_summary()

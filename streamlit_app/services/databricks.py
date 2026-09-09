@@ -1,8 +1,9 @@
 """Databricks SQL Warehouse Connector Service.
-Connects via databricks-sql-connector to Unity Catalog tables.
-Uses native parameterized queries to eliminate SQL injection vulnerabilities.
+Connects via databricks-sql-connector to Unity Catalog tables in aml_engine.aml_poc.
+Supports Databricks Apps OAuth service principal credentials and SQL Warehouse resource bindings.
 """
 import logging
+import os
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from aml_app.config.settings import settings
@@ -11,34 +12,72 @@ logger = logging.getLogger(__name__)
 
 class DatabricksService:
     def __init__(self):
-        self.host = settings.DATABRICKS_HOST
-        self.token = settings.DATABRICKS_TOKEN
-        self.http_path = settings.DATABRICKS_HTTP_PATH
         self.catalog = settings.DATABRICKS_CATALOG
         self.schema = settings.DATABRICKS_SCHEMA
 
+    def _resolve_connection_params(self):
+        """Resolve host, http_path, and auth credentials for Databricks Apps or external PAT."""
+        host = settings.DATABRICKS_HOST
+        http_path = settings.DATABRICKS_HTTP_PATH
+        token = settings.DATABRICKS_TOKEN
+        cfg = None
+
+        # 1. Try resolving via Databricks SDK Config (Native Databricks Apps OAuth)
+        try:
+            from databricks.sdk.core import Config
+            cfg = Config()
+            if not host and hasattr(cfg, "host") and cfg.host:
+                host = cfg.host
+        except Exception as e:
+            logger.debug(f"SDK Config resolution: {e}")
+
+        # 2. Resolve warehouse HTTP path from resource-backed DATABRICKS_WAREHOUSE_ID
+        warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID") or settings.DATABRICKS_WAREHOUSE_ID
+        if not http_path and warehouse_id:
+            http_path = f"/sql/1.0/warehouses/{warehouse_id}"
+
+        # 3. Clean hostname if user included https://
+        if host:
+            host = host.replace("https://", "").replace("http://", "").rstrip("/")
+
+        return host, http_path, token, cfg
+
     def is_configured(self) -> bool:
-        """Check if connection credentials are provided."""
+        """Check if Databricks connection parameters exist or running in Databricks Apps."""
         return settings.is_cloud_configured
 
+    def _get_connection(self):
+        """Build an authenticated databricks.sql connection."""
+        from databricks import sql
+        host, http_path, token, cfg = self._resolve_connection_params()
+
+        connect_kwargs = {
+            "server_hostname": host,
+            "http_path": http_path,
+            "catalog": self.catalog,
+            "schema": self.schema
+        }
+
+        # Use PAT if explicitly provided; otherwise use Databricks Apps OAuth credentials provider
+        if token:
+            connect_kwargs["access_token"] = token
+        elif cfg:
+            connect_kwargs["credentials_provider"] = lambda: cfg.authenticate
+        
+        return sql.connect(**connect_kwargs)
+
     def test_connection(self) -> Tuple[bool, str]:
-        """Verify connection to Databricks SQL Warehouse."""
+        """Verify connection to Databricks SQL Warehouse and return diagnostic status."""
         if not self.is_configured():
-            return False, "Databricks credentials not configured; running in Local Lakehouse Mode."
+            return False, "Databricks parameters not configured; running in local adapter mode."
         try:
-            from databricks import sql
-            with sql.connect(
-                server_hostname=self.host,
-                http_path=self.http_path,
-                access_token=self.token,
-                catalog=self.catalog,
-                schema=self.schema
-            ) as connection:
+            with self._get_connection() as connection:
                 with connection.cursor() as cursor:
-                    cursor.execute("SELECT 1 AS health_check")
-                    res = cursor.fetchall()
-                    if res:
-                        return True, "Connected to Databricks SQL Warehouse successfully."
+                    cursor.execute("SELECT current_catalog() AS catalog, current_schema() AS schema")
+                    row = cursor.fetchone()
+                    if row:
+                        cat, sch = row[0], row[1]
+                        return True, f"Connected to Databricks SQL Warehouse! Active Namespace: {cat}.{sch}"
             return False, "No response from Databricks SQL Warehouse."
         except Exception as e:
             logger.error(f"Databricks connection check failed: {e}")
@@ -46,18 +85,8 @@ class DatabricksService:
 
     def execute_query(self, query: str, params: Optional[Dict[str, Any] | Tuple[Any, ...]] = None) -> pd.DataFrame:
         """Execute parameterized SQL query and return a Pandas DataFrame."""
-        if not self.is_configured():
-            raise RuntimeError("Databricks is not configured.")
-        
-        from databricks import sql
         try:
-            with sql.connect(
-                server_hostname=self.host,
-                http_path=self.http_path,
-                access_token=self.token,
-                catalog=self.catalog,
-                schema=self.schema
-            ) as connection:
+            with self._get_connection() as connection:
                 with connection.cursor() as cursor:
                     if params:
                         cursor.execute(query, parameters=params)
@@ -68,5 +97,24 @@ class DatabricksService:
                     rows = cursor.fetchall()
                     return pd.DataFrame(rows, columns=columns)
         except Exception as e:
-            logger.error(f"Databricks SQL Execution error: {e}")
+            logger.error(f"Databricks SQL Execution error: {e} | Query: {query}")
             raise
+
+    def get_tables(self) -> List[str]:
+        """Discover available tables in aml_engine.aml_poc."""
+        try:
+            df = self.execute_query(f"SHOW TABLES IN {self.catalog}.{self.schema}")
+            if "tableName" in df.columns:
+                return df["tableName"].tolist()
+            elif "table_name" in df.columns:
+                return df["table_name"].tolist()
+            elif len(df.columns) > 1:
+                return df.iloc[:, 1].tolist()
+            return []
+        except Exception as e:
+            logger.warning(f"Failed to fetch tables: {e}")
+            return []
+
+    def describe_table(self, table_name: str) -> pd.DataFrame:
+        """Get column schema and types for a table."""
+        return self.execute_query(f"DESCRIBE TABLE {self.catalog}.{self.schema}.{table_name}")
