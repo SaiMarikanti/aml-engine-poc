@@ -1,70 +1,73 @@
 """Databricks SQL Warehouse Connector Service.
 Connects via databricks-sql-connector to Unity Catalog tables in aml_engine.aml_poc.
-Supports Databricks Apps OAuth service principal credentials and SQL Warehouse resource bindings.
+Uses Databricks Apps OAuth credentials provider via Databricks SDK Config and DATABRICKS_WAREHOUSE_ID.
 """
 import logging
 import os
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
+
+try:
+    from databricks import sql
+except ImportError:
+    sql = None
+
+try:
+    from databricks.sdk.core import Config
+    cfg = Config()
+except Exception as e:
+    Config = None
+    cfg = None
+
 from aml_app.config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+
+def get_connection(catalog: Optional[str] = None, schema: Optional[str] = None):
+    warehouse_id = os.environ.get("DATABRICKS_WAREHOUSE_ID") or settings.DATABRICKS_WAREHOUSE_ID
+    if not warehouse_id:
+        raise KeyError("DATABRICKS_WAREHOUSE_ID environment variable not found.")
+
+    server_hostname = cfg.host if (cfg and hasattr(cfg, "host") and cfg.host) else (settings.DATABRICKS_HOST or "")
+    if server_hostname:
+        server_hostname = server_hostname.replace("https://", "").replace("http://", "").rstrip("/")
+
+    connect_kwargs = {
+        "server_hostname": server_hostname,
+        "http_path": f"/sql/1.0/warehouses/{warehouse_id}",
+    }
+
+    cat = catalog or settings.DATABRICKS_CATALOG
+    sch = schema or settings.DATABRICKS_SCHEMA
+    if cat:
+        connect_kwargs["catalog"] = cat
+    if sch:
+        connect_kwargs["schema"] = sch
+
+    if cfg:
+        connect_kwargs["credentials_provider"] = lambda: cfg.authenticate
+    elif settings.DATABRICKS_TOKEN:
+        connect_kwargs["access_token"] = settings.DATABRICKS_TOKEN
+
+    return sql.connect(**connect_kwargs)
+
 
 class DatabricksService:
     def __init__(self):
         self.catalog = settings.DATABRICKS_CATALOG
         self.schema = settings.DATABRICKS_SCHEMA
 
-    def _resolve_connection_params(self):
-        """Resolve host, http_path, and auth credentials for Databricks Apps or external PAT."""
-        host = settings.DATABRICKS_HOST
-        http_path = settings.DATABRICKS_HTTP_PATH
-        token = settings.DATABRICKS_TOKEN
-        cfg = None
-
-        # 1. Try resolving via Databricks SDK Config (Native Databricks Apps OAuth)
-        try:
-            from databricks.sdk.core import Config
-            cfg = Config()
-            if not host and hasattr(cfg, "host") and cfg.host:
-                host = cfg.host
-        except Exception as e:
-            logger.debug(f"SDK Config resolution: {e}")
-
-        # 2. Resolve warehouse HTTP path from resource-backed DATABRICKS_WAREHOUSE_ID
-        warehouse_id = os.getenv("DATABRICKS_WAREHOUSE_ID") or settings.DATABRICKS_WAREHOUSE_ID
-        if not http_path and warehouse_id:
-            http_path = f"/sql/1.0/warehouses/{warehouse_id}"
-
-        # 3. Clean hostname if user included https://
-        if host:
-            host = host.replace("https://", "").replace("http://", "").rstrip("/")
-
-        return host, http_path, token, cfg
-
     def is_configured(self) -> bool:
         """Check if Databricks connection parameters exist or running in Databricks Apps."""
-        return settings.is_cloud_configured
+        return bool(
+            os.getenv("DATABRICKS_WAREHOUSE_ID")
+            or settings.is_cloud_configured
+        )
 
     def _get_connection(self):
         """Build an authenticated databricks.sql connection."""
-        from databricks import sql
-        host, http_path, token, cfg = self._resolve_connection_params()
-
-        connect_kwargs = {
-            "server_hostname": host,
-            "http_path": http_path,
-            "catalog": self.catalog,
-            "schema": self.schema
-        }
-
-        # Use PAT if explicitly provided; otherwise use Databricks Apps OAuth credentials provider
-        if token:
-            connect_kwargs["access_token"] = token
-        elif cfg:
-            connect_kwargs["credentials_provider"] = lambda: cfg.authenticate
-        
-        return sql.connect(**connect_kwargs)
+        return get_connection(catalog=self.catalog, schema=self.schema)
 
     def test_connection(self) -> Tuple[bool, str]:
         """Verify connection to Databricks SQL Warehouse and return diagnostic status."""

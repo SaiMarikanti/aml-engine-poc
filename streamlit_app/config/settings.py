@@ -27,21 +27,6 @@ class Settings:
         # Resolve HTTP path from resource-backed DATABRICKS_WAREHOUSE_ID if HTTP path is not explicit
         if not self.DATABRICKS_HTTP_PATH and self.DATABRICKS_WAREHOUSE_ID:
             self.DATABRICKS_HTTP_PATH = f"/sql/1.0/warehouses/{self.DATABRICKS_WAREHOUSE_ID}"
-            
-        # Check st.secrets fallback if available
-        try:
-            import streamlit as st
-            if hasattr(st, "secrets") and "databricks" in st.secrets:
-                db_sec = st.secrets["databricks"]
-                self.DATABRICKS_HOST = self.DATABRICKS_HOST or db_sec.get("host", "")
-                self.DATABRICKS_TOKEN = self.DATABRICKS_TOKEN or db_sec.get("token", "")
-                self.DATABRICKS_HTTP_PATH = self.DATABRICKS_HTTP_PATH or db_sec.get("http_path", "")
-                self.DATABRICKS_CATALOG = db_sec.get("catalog", self.DATABRICKS_CATALOG)
-                self.DATABRICKS_SCHEMA = db_sec.get("schema", self.DATABRICKS_SCHEMA)
-                if not self.DATABRICKS_HTTP_PATH and db_sec.get("warehouse_id"):
-                    self.DATABRICKS_HTTP_PATH = f"/sql/1.0/warehouses/{db_sec.get('warehouse_id')}"
-        except Exception:
-            pass
 
     @property
     def is_databricks_app_runtime(self) -> bool:
