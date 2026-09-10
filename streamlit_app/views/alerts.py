@@ -19,7 +19,7 @@ def render_alerts():
     # Alert Center Work Queue
     st.markdown("""
         <div style="margin-bottom: 18px;">
-            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 700; color: #1E3A8A;">ALERT CENTER</h2>
+            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #1E3A8A;">ALERT CENTER</h2>
             <p style="margin: 4px 0 0 0; color: #68707A; font-size: 0.9rem;">
                 Triage queue and active investigation worklist populated by surveillance pipelines.
             </p>
@@ -27,7 +27,7 @@ def render_alerts():
     """, unsafe_allow_html=True)
 
     # Filters Card
-    st.markdown('<div class="neo-card" style="padding: 18px 22px; margin-bottom: 20px;">', unsafe_allow_html=True)
+    st.markdown('<div class="neo-card" style="padding: 16px 20px; margin-bottom: 18px;">', unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     with c1:
         status_filter = st.selectbox(
@@ -52,7 +52,11 @@ def render_alerts():
             offset=0
         )
     except Exception as e:
-        st.error(f"Unable to load alerts: Databricks SQL query failed ({e}). Check the System Status page for connection details.")
+        st.markdown(f"""
+            <div class="neo-warning-compact">
+                <b style="color: #92400E;">⚠ Unable to load alerts from Databricks SQL Warehouse: {e}</b>
+            </div>
+        """, unsafe_allow_html=True)
         df_alerts = pd.DataFrame()
         total = 0
 
@@ -71,7 +75,7 @@ def render_alerts():
     # Alerts Table
     st.markdown('<div class="neo-card" style="padding: 16px 20px;">', unsafe_allow_html=True)
     st.markdown("""
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 1.2fr; 
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 1.2fr 1.2fr 1fr 1fr 1.1fr; 
                     font-size: 0.78rem; font-weight: 700; color: #68707A; text-transform: uppercase; 
                     border-bottom: 2px solid #D1D5DB; padding-bottom: 8px; margin-bottom: 8px;">
             <div>Alert ID</div>
@@ -91,7 +95,7 @@ def render_alerts():
         score = float(row['RISK_SCORE'])
         status = str(row['STATUS'])
         
-        c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1, 1, 1.2, 1.2, 1.2, 1, 1, 1.2])
+        c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1, 1, 1.2, 1.2, 1.2, 1, 1, 1.1])
         with c1:
             st.markdown(f'<span class="code-pill">AL{a_id}</span>', unsafe_allow_html=True)
         with c2:
@@ -123,15 +127,19 @@ def render_alerts():
     st.markdown('</div>', unsafe_allow_html=True)
 
 def render_alert_investigation(alert_id: int):
-    """Deep Alert Investigation Workbench - Strongest Screen."""
-    render_breadcrumbs([("Dashboard", "Dashboard"), ("Alert Center", "Alerts"), (f"Alert AL{alert_id}", "")])
+    """Deep Alert Investigation Workbench."""
+    # Top Return / Navigation bar
+    col_back, col_trail = st.columns([1, 4])
+    with col_back:
+        if st.button("← Back to Alert Center", key="back_to_alert_center_btn"):
+            st.session_state.selected_alert = None
+            st.rerun()
+    with col_trail:
+        render_breadcrumbs([("Dashboard", "Dashboard"), ("Alert Center", "Alerts"), (f"Alert AL{alert_id}", "")])
 
     alert = data_service.get_alert_detail(alert_id)
     if not alert:
         st.error(f"Alert AL{alert_id} not found.")
-        if st.button("← Return to Alert Center"):
-            st.session_state.selected_alert = None
-            st.rerun()
         return
 
     score = alert.get("RISK_SCORE", 0.90)
@@ -141,7 +149,7 @@ def render_alert_investigation(alert_id: int):
 
     # 1. Prominent Neumorphic Alert Header
     st.markdown(f"""
-        <div class="neo-card" style="padding: 24px 28px; border-left: 6px solid {'#991B1B' if risk_tier == 'CRITICAL' else '#DC2626'};">
+        <div class="neo-card" style="padding: 22px 26px; border-left: 6px solid {'#991B1B' if risk_tier == 'CRITICAL' else '#DC2626'};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
@@ -157,7 +165,7 @@ def render_alert_investigation(alert_id: int):
                 </div>
                 <div style="text-align: right;">
                     <div style="font-size: 0.78rem; font-weight: 700; color: #68707A; text-transform: uppercase;">Composite Confidence</div>
-                    <div style="font-size: 2.5rem; font-weight: 800; color: #DC2626; line-height: 1;">
+                    <div style="font-size: 2.4rem; font-weight: 800; color: #DC2626; line-height: 1;">
                         {score:.2f}
                     </div>
                 </div>
@@ -194,138 +202,102 @@ def render_alert_investigation(alert_id: int):
 
     # 3. Detection Evidence: 3 Physical Cards
     st.markdown('<div class="neo-card" style="padding: 22px;">', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">MULTIVARIATE SURVEILLANCE EVIDENCE</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">MULTIVARIATE DETECTION EVIDENCE</div>', unsafe_allow_html=True)
     
     ce1, ce2, ce3 = st.columns(3)
     atype = str(alert.get("ALERT_TYPE", "")).lower()
-    
+
     with ce1:
-        st.markdown(f"""
-            <div class="evidence-card {'triggered' if 'fan_in' in atype or alert['TX_AMOUNT'] > 10 else ''}">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #68707A; text-transform: uppercase;">RULE ENGINE</div>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #991B1B; margin-top: 6px;">
-                    {'✓ TRIGGERED' if 'fan_in' in atype or alert['TX_AMOUNT'] > 10 else '○ PASSED'}
-                </div>
-                <div style="font-size: 0.82rem; color: #4B5563; margin-top: 4px;">
-                    Rule R-104: High-Velocity Rapid Aggregation & Fan-in Structuring Threshold
-                </div>
+        st.markdown("""
+            <div class="evidence-card triggered">
+                <div style="font-size: 0.76rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">RULE ENGINE</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">TRIGGERED</div>
+                <div style="font-size: 0.82rem; color: #4B5563;">Deterministic threshold exceeded for high-velocity transfer burst.</div>
             </div>
         """, unsafe_allow_html=True)
-        
+
     with ce2:
         st.markdown(f"""
-            <div class="evidence-card {'triggered' if 'cycle' in atype else ''}">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #68707A; text-transform: uppercase;">GRAPH ANALYSIS</div>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #991B1B; margin-top: 6px;">
-                    {'✓ TRIGGERED' if 'cycle' in atype else '○ INFORMATIVE'}
-                </div>
-                <div style="font-size: 0.82rem; color: #4B5563; margin-top: 4px;">
-                    GraphFrames Topology: Circular Directed Cycle Pattern (Length: 3)
-                </div>
+            <div class="evidence-card {'triggered' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else ''}">
+                <div style="font-size: 0.76rem; font-weight: 700; color: {'#DC2626' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else '#1E3A8A'}; text-transform: uppercase;">GRAPH TOPOLOGY</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">{'TRIGGERED' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else 'NORMAL'}</div>
+                <div style="font-size: 0.82rem; color: #4B5563;">GraphFrames motifs: {alert.get('ALERT_TYPE', 'Transfer')}.</div>
             </div>
         """, unsafe_allow_html=True)
 
     with ce3:
         st.markdown(f"""
             <div class="evidence-card triggered">
-                <div style="font-size: 0.75rem; font-weight: 700; color: #68707A; text-transform: uppercase;">ML MODEL (XGBOOST)</div>
-                <div style="font-size: 1.05rem; font-weight: 800; color: #991B1B; margin-top: 6px;">
-                    ✓ SCORE: {score:.2f}
-                </div>
-                <div style="font-size: 0.82rem; color: #4B5563; margin-top: 4px;">
-                    Model v3.2 Fraud Probability: 99.4th Percentile Anomaly
-                </div>
+                <div style="font-size: 0.76rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">ML MODEL (XGBOOST)</div>
+                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">{score:.2f} RISK</div>
+                <div style="font-size: 0.82rem; color: #4B5563;">Supervised probability of money laundering pattern.</div>
             </div>
         """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # 4. Investigator Actions & Case Management
-    col_act, col_comm = st.columns([1.2, 1])
+    # 4. Connected Network Jump Card
+    st.markdown('<div class="neo-card" style="padding: 20px 24px;">', unsafe_allow_html=True)
+    c_n1, c_n2 = st.columns([3, 1])
+    with c_n1:
+        st.markdown(f"""
+            <div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A;">COUNTERPARTY GRAPH TOPOLOGY</div>
+            <div style="font-size: 0.85rem; color: #4B5563; margin-top: 4px;">
+                Direct GraphFrames connection between <b>ACC_{alert['SENDER_ACCOUNT_ID']}</b> ──(₹{alert['TX_AMOUNT']:,.2f})──► <b>ACC_{alert['RECEIVER_ACCOUNT_ID']}</b>
+            </div>
+        """, unsafe_allow_html=True)
+    with c_n2:
+        pages_map = st.session_state.get("_pages_map", {})
+        if st.button("Open in Network Viewer →", key="btn_open_net_from_alert", use_container_width=True):
+            st.session_state.selected_network_account = alert['SENDER_ACCOUNT_ID']
+            if "Network" in pages_map:
+                st.switch_page(pages_map["Network"])
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_act:
-        st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 12px;">CASE MANAGEMENT ACTIONS</div>', unsafe_allow_html=True)
+    # 5. Investigation Workflow & Actions
+    st.markdown('<div class="neo-card" style="padding: 22px 26px;">', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">INVESTIGATION DISPOSITION & ACTIONS</div>', unsafe_allow_html=True)
+    
+    col_act1, col_act2 = st.columns([1, 2])
+    with col_act1:
+        st.markdown(f"**Current Status:** {render_status_chip(curr_status)}", unsafe_allow_html=True)
+        st.markdown(f"**Assigned Investigator:** `{assigned_to}`")
         
-        st.write("Update Investigation Status:")
-        b1, b2, b3, b4 = st.columns(4)
-        with b1:
-            if st.button("UNDER REVIEW", key=f"btn_st_rev_{alert_id}", use_container_width=True):
-                data_service.update_alert_status(alert_id, "UNDER REVIEW", "analyst_1")
-                st.success("Status updated to UNDER REVIEW")
-                st.rerun()
-        with b2:
-            if st.button("CONFIRM FRAUD", key=f"btn_st_conf_{alert_id}", type="primary", use_container_width=True):
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("**Change Disposition:**")
+        c_b1, c_b2, c_b3 = st.columns(3)
+        with c_b1:
+            if st.button("CONFIRM", key="btn_confirm", use_container_width=True, type="primary"):
                 data_service.update_alert_status(alert_id, "CONFIRMED", "analyst_1")
-                st.error("Status updated to CONFIRMED")
                 st.rerun()
-        with b3:
-            if st.button("FALSE POSITIVE", key=f"btn_st_fp_{alert_id}", use_container_width=True):
+        with c_b2:
+            if st.button("FALSE POSITIVE", key="btn_fp", use_container_width=True):
                 data_service.update_alert_status(alert_id, "FALSE POSITIVE", "analyst_1")
-                st.info("Status marked as FALSE POSITIVE")
                 st.rerun()
-        with b4:
-            if st.button("CLOSE CASE", key=f"btn_st_close_{alert_id}", use_container_width=True):
-                data_service.update_alert_status(alert_id, "CLOSED", "analyst_1")
-                st.success("Alert successfully CLOSED")
+        with c_b3:
+            if st.button("ESCALATE", key="btn_esc", use_container_width=True):
+                data_service.update_alert_status(alert_id, "UNDER REVIEW", "analyst_1")
                 st.rerun()
 
-        st.markdown('<div style="margin-top: 16px;"></div>', unsafe_allow_html=True)
-        st.write("Assign Investigator:")
-        c_assign1, c_assign2 = st.columns([2.5, 1])
-        with c_assign1:
-            new_assignee = st.selectbox("Assignee", ["analyst_1", "investigator_lead", "compliance_officer_2", "fraud_specialist_4"], index=0)
-        with c_assign2:
-            if st.button("Reassign", use_container_width=True):
-                data_service.assign_alert(alert_id, new_assignee, "analyst_1")
-                st.success(f"Assigned to {new_assignee}")
+    with col_act2:
+        st.markdown("**Add Investigation Audit Note:**")
+        note_text = st.text_area("Investigation Note", placeholder="Enter findings, regulatory rationale, or escalation notes...", label_visibility="collapsed")
+        if st.button("Save Investigation Note", key="btn_save_note"):
+            if note_text.strip():
+                data_service.add_alert_comment(alert_id, note_text.strip(), "analyst_1")
+                st.success("Note committed to Databricks compliance audit log!")
                 st.rerun()
 
-        st.markdown('<div style="height: 1px; background: #DFE4EA; margin: 18px 0;"></div>', unsafe_allow_html=True)
-        st.write("Deep Graph & Account Exploration:")
-        cg1, cg2 = st.columns(2)
-        with cg1:
-            if st.button("Inspect Sender in Network", use_container_width=True):
-                st.session_state.selected_network_account = int(alert['SENDER_ACCOUNT_ID'])
-                st.session_state.nav_section = "Network"
-                st.rerun()
-        with cg2:
-            if st.button("Inspect Receiver in Network", use_container_width=True):
-                st.session_state.selected_network_account = int(alert['RECEIVER_ACCOUNT_ID'])
-                st.session_state.nav_section = "Network"
-                st.rerun()
-
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_comm:
-        st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 12px;">INVESTIGATOR NOTES & AUDIT</div>', unsafe_allow_html=True)
-        
-        # Display existing comments
+        # Audit History
         comments = alert.get("comments", [])
         if comments:
-            st.markdown('<div style="max-height: 200px; overflow-y: auto; margin-bottom: 14px;">', unsafe_allow_html=True)
+            st.markdown("<br><b>Prior Case Notes:</b>", unsafe_allow_html=True)
             for c in comments:
                 st.markdown(f"""
-                    <div style="background: #F1F4F8; border-radius: 8px; padding: 10px; margin-bottom: 8px; font-size: 0.82rem;">
-                        <div style="font-weight: 700; color: #1E3A8A;">{c['created_by']} <span style="font-weight: 400; color: #68707A; font-size: 0.75rem;">({c['created_timestamp']})</span></div>
-                        <div style="color: #20242A; margin-top: 4px;">{c['comment_text']}</div>
+                    <div style="background: #F4F6F9; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 0.82rem;">
+                        <span style="font-weight: 700; color: #1E3A8A;">{c.get('user_id', 'analyst')}</span> 
+                        <span style="color: #68707A; font-size: 0.74rem;">({c.get('timestamp', '')})</span>: 
+                        {c.get('comment_text', '')}
                     </div>
                 """, unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.caption("No notes added to this case yet.")
 
-        # Add comment input
-        new_comment = st.text_area("Add Case Note / Decision Justification:", height=70, placeholder="Explain rationale or request documentation...")
-        if st.button("ADD COMMENT", type="primary", use_container_width=True):
-            if new_comment.strip():
-                data_service.add_alert_comment(alert_id, new_comment.strip(), "analyst_1")
-                st.success("Note saved and recorded to audit trail!")
-                st.rerun()
-            else:
-                st.warning("Note text cannot be empty.")
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    if st.button("← Back to Alert Queue"):
-        st.session_state.selected_alert = None
-        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)

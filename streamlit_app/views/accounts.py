@@ -6,17 +6,19 @@ from aml_app.components.breadcrumbs import render_breadcrumbs
 from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
 
 def render_accounts():
+    pages_map = st.session_state.get("_pages_map", {})
+    
     st.markdown("""
         <div style="margin-bottom: 18px;">
-            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 700; color: #1E3A8A;">ACCOUNT RISK PROFILE</h2>
+            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #1E3A8A;">ACCOUNT RISK PROFILE</h2>
             <p style="margin: 4px 0 0 0; color: #68707A; font-size: 0.9rem;">
-                Surveillance 360-degree account view, counterparty aggregation, and graph centrality metrics.
+                Surveillance 360-degree account profile, counterparty exposure, and GraphFrames topology metrics.
             </p>
         </div>
     """, unsafe_allow_html=True)
 
     # Search Bar Card
-    st.markdown('<div class="neo-card" style="padding: 18px 22px; margin-bottom: 20px;">', unsafe_allow_html=True)
+    st.markdown('<div class="neo-card" style="padding: 16px 20px; margin-bottom: 20px;">', unsafe_allow_html=True)
     c_s1, c_s2 = st.columns([3, 1])
     with c_s1:
         default_val = str(st.session_state.get("selected_account", 6976))
@@ -44,7 +46,7 @@ def render_accounts():
 
     # Top Account Summary Card
     st.markdown(f"""
-        <div class="neo-card" style="padding: 24px 28px; border-left: 6px solid {'#991B1B' if risk_level in ('HIGH', 'CRITICAL') else '#059669'};">
+        <div class="neo-card" style="padding: 22px 26px; border-left: 6px solid {'#991B1B' if risk_level in ('HIGH', 'CRITICAL') else '#059669'};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
@@ -68,52 +70,45 @@ def render_accounts():
         </div>
     """, unsafe_allow_html=True)
 
-    # Metrics Row
-    m1, m2, m3, m4, m5, m6 = st.columns(6)
+    # Core Metric Cards: Transactions, Open Alerts, Total Sent, Total Received, Suspicious Connections
+    m1, m2, m3, m4, m5 = st.columns(5)
     with m1:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">INCOMING TXS</div>
-                <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">{acc.get('INCOMING_COUNT', 0)}</div>
+                <div style="font-size: 0.72rem; color: #68707A; font-weight: 700;">TRANSACTIONS</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #20242A;">{acc.get('INCOMING_COUNT', 0) + acc.get('OUTGOING_COUNT', 0)}</div>
             </div>
         """, unsafe_allow_html=True)
     with m2:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">OUTGOING TXS</div>
-                <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">{acc.get('OUTGOING_COUNT', 0)}</div>
+                <div style="font-size: 0.72rem; color: #68707A; font-weight: 700;">OPEN ALERTS</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #DC2626;">{acc.get('OPEN_ALERTS', 0)}</div>
             </div>
         """, unsafe_allow_html=True)
     with m3:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">TOTAL RECEIVED</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: #059669;">₹{acc.get('TOTAL_RECEIVED', 0.0):,.0f}</div>
+                <div style="font-size: 0.72rem; color: #68707A; font-weight: 700;">TOTAL SENT</div>
+                <div style="font-size: 1.25rem; font-weight: 800; color: #DC2626;">₹{acc.get('TOTAL_SENT', 0.0):,.0f}</div>
             </div>
         """, unsafe_allow_html=True)
     with m4:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">TOTAL SENT</div>
-                <div style="font-size: 1.2rem; font-weight: 700; color: #DC2626;">₹{acc.get('TOTAL_SENT', 0.0):,.0f}</div>
+                <div style="font-size: 0.72rem; color: #68707A; font-weight: 700;">TOTAL RECEIVED</div>
+                <div style="font-size: 1.25rem; font-weight: 800; color: #059669;">₹{acc.get('TOTAL_RECEIVED', 0.0):,.0f}</div>
             </div>
         """, unsafe_allow_html=True)
     with m5:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">OPEN ALERTS</div>
-                <div style="font-size: 1.25rem; font-weight: 700; color: #DC2626;">{acc.get('OPEN_ALERTS', 0)}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    with m6:
-        st.markdown(f"""
-            <div class="neo-card-sm">
-                <div style="font-size: 0.72rem; color: #68707A; font-weight: 600;">SUSPICIOUS CONNS</div>
-                <div style="font-size: 1.25rem; font-weight: 700; color: #991B1B;">{acc.get('SUSPICIOUS_CONNECTIONS', 0)}</div>
+                <div style="font-size: 0.72rem; color: #68707A; font-weight: 700;">SUSPICIOUS CONNECTIONS</div>
+                <div style="font-size: 1.3rem; font-weight: 800; color: #991B1B;">{acc.get('SUSPICIOUS_CONNECTIONS', 0)}</div>
             </div>
         """, unsafe_allow_html=True)
 
-    # Risk Factors & Action Button
+    # Risk Factors & Network Launch
     col_factors, col_netbtn = st.columns([2.2, 1])
     with col_factors:
         st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
@@ -129,17 +124,17 @@ def render_accounts():
 
     with col_netbtn:
         st.markdown('<div class="neo-card" style="padding: 20px; text-align: center;">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">NETWORK EXPLORATION</div>', unsafe_allow_html=True)
-        st.write("Visualize all 1-hop to 3-hop money flow counterparties in the interactive GraphFrames canvas.")
+        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">NETWORK TOPOLOGY</div>', unsafe_allow_html=True)
+        st.write("Explore connected transfer counterparties and circular routing in the GraphFrames canvas.")
         st.write("")
         if st.button("OPEN IN NETWORK ANALYSIS", type="primary", use_container_width=True):
             st.session_state.selected_network_account = account_id
-            st.session_state.nav_section = "Network"
-            st.rerun()
+            if "Network" in pages_map:
+                st.switch_page(pages_map["Network"])
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Related Alerts & Transactions Tabs
-    t_alerts, t_txs = st.tabs(["Related Active Alerts", "Recent Transaction History"])
+    # Sub-sections: Alerts, Transaction History, Connected Accounts
+    t_alerts, t_txs = st.tabs(["Active Alerts", "Transaction History"])
     
     with t_alerts:
         rel_alerts = acc.get("related_alerts", [])
@@ -159,8 +154,8 @@ def render_accounts():
                 with c5:
                     if st.button("View Alert", key=f"btn_rel_al_{ra['ALERT_ID']}_{idx}", use_container_width=True):
                         st.session_state.selected_alert = int(ra['ALERT_ID'])
-                        st.session_state.nav_section = "Alerts"
-                        st.rerun()
+                        if "Alerts" in pages_map:
+                            st.switch_page(pages_map["Alerts"])
                 st.markdown('<div style="height: 1px; background: #EEF2F6; margin: 4px 0;"></div>', unsafe_allow_html=True)
 
     with t_txs:
@@ -181,6 +176,6 @@ def render_accounts():
                 with c4:
                     if st.button("TX Details", key=f"btn_acc_tx_{rt['TX_ID']}_{idx}", use_container_width=True):
                         st.session_state.selected_transaction = int(rt['TX_ID'])
-                        st.session_state.nav_section = "Transactions"
-                        st.rerun()
+                        if "Transactions" in pages_map:
+                            st.switch_page(pages_map["Transactions"])
                 st.markdown('<div style="height: 1px; background: #EEF2F6; margin: 4px 0;"></div>', unsafe_allow_html=True)

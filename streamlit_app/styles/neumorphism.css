@@ -1,29 +1,32 @@
-/* Neumorphic Design System for AML Investigation Platform
+/* Neumorphic Design System for Databricks AML Intelligence Platform
    Palette:
    - Base / Surface: #E8ECF1
+   - Sidebar Surface: #E2E7ED
    - Text Primary: #20242A
    - Text Secondary: #68707A
    - Text Muted: #9AA0A6
    - Accents / Risk States:
-       LOW: #059669 (Soft Emerald)
+       LOW: #059669 (Emerald)
        MEDIUM: #D97706 (Amber)
        HIGH: #DC2626 (Crimson Red)
        CRITICAL: #991B1B (Dark Wine)
-       PRIMARY ACCENT: #1E3A8A (Deep Navy Blue)
+       PRIMARY BRAND: #1E3A8A (Deep Navy Blue)
+       ACTIVE INSET: #DCE2E9
 */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg-base: #E8ECF1;
   --bg-surface: #E8ECF1;
-  --shadow-light: #ffffff;
-  --shadow-dark: #c8ced6;
-  --shadow-darker: #b5bcc6;
+  --bg-sidebar: #E2E7ED;
+  --shadow-light: #FFFFFF;
+  --shadow-dark: #C5CBD4;
+  --shadow-darker: #B2B9C4;
   
   --text-main: #20242A;
   --text-secondary: #68707A;
-  --text-muted: #9AA0A6;
+  --text-muted: #8C94A0;
   
   --color-primary: #1E3A8A;
   --color-low: #059669;
@@ -32,29 +35,30 @@
   --color-critical: #991B1B;
 }
 
-/* Base Body Styles */
+/* Base Body & App Container */
 .stApp {
   background-color: var(--bg-base) !important;
   color: var(--text-main) !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
 
-/* Hide default streamlit headers and footers for clean desktop app feel */
+/* Hide default streamlit headers and footers for a true native application feel */
 #MainMenu {visibility: hidden;}
 footer {visibility: hidden;}
 header[data-testid="stHeader"] {
   background-color: transparent !important;
+  z-index: 100 !important;
 }
 
-/* Neumorphic Surfaces */
+/* Neumorphic Soft Raised Surfaces */
 .neo-card {
   background: var(--bg-surface);
   border-radius: 16px;
   box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
   padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   transition: all 0.25s ease;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
 .neo-card:hover {
@@ -66,73 +70,180 @@ header[data-testid="stHeader"] {
   border-radius: 12px;
   box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
   padding: 14px 18px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.65);
   margin-bottom: 12px;
 }
 
+/* Inset Soft Surfaces */
 .neo-card-inset {
   background: var(--bg-surface);
   border-radius: 12px;
   box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
-  padding: 16px;
-  border: none;
+  padding: 16px 20px;
+  border: 1px solid rgba(197, 203, 212, 0.3);
 }
 
-/* Metric / KPI styling */
+/* Subtle Warning / Diagnostic Banner (Non-Dominating) */
+.neo-warning-compact {
+  background: #F4F6F9;
+  border-radius: 12px;
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+  border-left: 5px solid #D97706;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Metric / KPI Card Styling */
 .neo-kpi-container {
   display: flex;
   flex-direction: column;
 }
+
 .neo-kpi-title {
-  font-size: 0.82rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   margin-bottom: 6px;
 }
+
 .neo-kpi-value {
   font-size: 2.1rem;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-main);
   line-height: 1.1;
-  font-family: 'Inter', sans-serif;
+  letter-spacing: -0.02em;
 }
+
 .neo-kpi-delta {
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
   margin-top: 6px;
 }
 
-/* Neumorphic Sidebar */
+/* ------------------------------------------------------------- */
+/* SIDEBAR NEUMORPHIC SHELL                                      */
+/* ------------------------------------------------------------- */
 section[data-testid="stSidebar"] {
-  background-color: #E2E7ED !important;
-  border-right: 1px solid #d4dae2;
-  box-shadow: 4px 0px 14px rgba(180, 188, 198, 0.4);
+  background-color: var(--bg-sidebar) !important;
+  border-right: 1px solid #D1D8E0;
+  box-shadow: 4px 0px 16px rgba(188, 195, 205, 0.5);
 }
 
 section[data-testid="stSidebar"] .block-container {
-  padding-top: 1.5rem;
+  padding-top: 1.25rem;
+  padding-bottom: 1.5rem;
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
 }
 
-.neo-nav-header {
+/* Sidebar Section Headers */
+.neo-sidebar-header {
   font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--text-muted);
+  font-weight: 800;
+  color: #7B8594;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  padding: 12px 10px 4px 10px;
+  padding: 14px 10px 6px 10px;
 }
 
-/* Badges & Risk Chips (High Contrast & Flat for Legibility) */
+/* Sidebar Lakehouse Status Widget */
+.neo-lakehouse-status {
+  background: #DCE2E9;
+  border-radius: 12px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 2px 2px 5px rgba(188, 195, 205, 0.6), inset -2px -2px 5px rgba(255, 255, 255, 0.8);
+  font-size: 0.76rem;
+  color: #4B5563;
+  margin-top: 24px;
+}
+
+.neo-lakehouse-status .brand-title {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--color-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Custom Neumorphic Navigation Buttons */
+div[data-testid="stSidebar"] div.stButton > button {
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 0.90rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: var(--bg-sidebar);
+  color: #374151;
+  box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+div[data-testid="stSidebar"] div.stButton > button:hover {
+  box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+/* Active Navigation Item (Selected State with Navy Inset & Accent) */
+div[data-testid="stSidebar"] div.stButton > button[kind="primary"],
+div[data-testid="stSidebar"] div.stButton > button:active {
+  background: #D8DFE7 !important;
+  color: var(--color-primary) !important;
+  font-weight: 800 !important;
+  border: 1px solid rgba(197, 203, 212, 0.5) !important;
+  border-left: 4px solid var(--color-primary) !important;
+  box-shadow: inset 3px 3px 6px #BFC7D2, inset -3px -3px 6px #FFFFFF !important;
+  transform: none !important;
+}
+
+/* ------------------------------------------------------------- */
+/* TOP APP HEADER BANNER                                         */
+/* ------------------------------------------------------------- */
+.neo-top-bar {
+  background: var(--bg-surface);
+  border-radius: 16px;
+  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+  padding: 12px 22px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+/* Inset Input styling for Streamlit text input */
+.stTextInput > div > div > input {
+  background: var(--bg-surface) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(197, 203, 212, 0.5) !important;
+  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light) !important;
+  color: var(--text-main) !important;
+  font-size: 0.88rem !important;
+}
+
+.stTextInput > div > div > input:focus {
+  border: 1px solid var(--color-primary) !important;
+  outline: none !important;
+}
+
+/* ------------------------------------------------------------- */
+/* BADGES & CHIPS (High contrast for forensic precision)         */
+/* ------------------------------------------------------------- */
 .risk-badge {
   display: inline-flex;
   align-items: center;
   padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -166,8 +277,9 @@ section[data-testid="stSidebar"] .block-container {
   padding: 3px 9px;
   border-radius: 6px;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .status-open {
@@ -195,41 +307,30 @@ section[data-testid="stSidebar"] .block-container {
   color: #047857;
 }
 
-/* Top App Header Banner */
-.neo-top-bar {
-  background: var(--bg-surface);
-  border-radius: 14px;
-  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
-  padding: 14px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
 /* Evidence Cards */
 .evidence-card {
   background: var(--bg-surface);
-  border-radius: 14px;
-  box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+  border-radius: 12px;
+  box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
   padding: 16px;
   border-left: 4px solid var(--color-primary);
   margin-bottom: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .evidence-card.triggered {
   border-left: 4px solid var(--color-high);
 }
 
-/* Code / Monospace text */
+/* Code & Monospace Pill */
 .code-pill {
   font-family: 'JetBrains Mono', monospace;
   background: #DFE4EA;
   padding: 2px 7px;
   border-radius: 5px;
-  font-size: 0.85em;
+  font-size: 0.84em;
   color: #1F2937;
+  font-weight: 600;
 }
 
 /* Breadcrumbs */
@@ -239,10 +340,16 @@ section[data-testid="stSidebar"] .block-container {
   gap: 8px;
   font-size: 0.82rem;
   color: var(--text-secondary);
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 .neo-breadcrumbs a {
   color: var(--color-primary);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
+}
+
+/* Clean Table Styles */
+.neo-table-container {
+  overflow-x: auto;
+  border-radius: 10px;
 }

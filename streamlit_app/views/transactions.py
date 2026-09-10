@@ -7,18 +7,20 @@ from aml_app.components.alert_card import render_evidence_chip
 from aml_app.utils.formatting import format_currency, render_risk_badge
 
 def render_transactions():
+    pages_map = st.session_state.get("_pages_map", {})
+    
     # If a specific transaction is selected, show Transaction Details
     selected_tx_id = st.session_state.get("selected_transaction")
     if selected_tx_id is not None:
-        render_transaction_details(selected_tx_id)
+        render_transaction_details(selected_tx_id, pages_map)
         return
 
     # Otherwise show Transaction Explorer list
     st.markdown("""
         <div style="margin-bottom: 18px;">
-            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 700; color: #1E3A8A;">TRANSACTION EXPLORER</h2>
+            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #1E3A8A;">TRANSACTION EXPLORER</h2>
             <p style="margin: 4px 0 0 0; color: #68707A; font-size: 0.9rem;">
-                Search across 1.32M surveillance transactions using indexed filters and multi-detector scoring.
+                Search across surveillance transactions using indexed filters and multi-detector scoring.
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -70,7 +72,11 @@ def render_transactions():
             offset=0
         )
     except Exception as e:
-        st.error(f"Unable to load transaction data: Databricks SQL query failed ({e}). Check the System Status page for connection details.")
+        st.markdown(f"""
+            <div class="neo-warning-compact">
+                <b style="color: #92400E;">⚠ Unable to load transaction data from Databricks SQL Warehouse: {e}</b>
+            </div>
+        """, unsafe_allow_html=True)
         df = pd.DataFrame()
         total_matches = 0
 
@@ -138,14 +144,14 @@ def render_transactions():
     )
     st.markdown('</div>', unsafe_allow_html=True)
 
-def render_transaction_details(tx_id: int):
-    """Render comprehensive Transaction Details page."""
+def render_transaction_details(tx_id: int, pages_map: dict):
+    """Render comprehensive Transaction Details view."""
     render_breadcrumbs([("Dashboard", "Dashboard"), ("Transactions", "Transactions"), (f"TX{tx_id}", "")])
     
     tx = data_service.get_transaction_details(tx_id)
     if not tx:
         st.error(f"Transaction TX{tx_id} could not be located in surveillance storage.")
-        if st.button("Back to Explorer"):
+        if st.button("← Back to Transactions"):
             st.session_state.selected_transaction = None
             st.rerun()
         return
@@ -158,14 +164,14 @@ def render_transaction_details(tx_id: int):
         <div class="neo-card" style="padding: 20px 24px; border-left: 6px solid {'#DC2626' if score >= 0.65 else '#059669'};">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h2 style="margin: 0; font-size: 1.8rem; font-weight: 700; color: #1E3A8A;">
+                    <h2 style="margin: 0; font-size: 1.8rem; font-weight: 800; color: #1E3A8A;">
                         TRANSACTION TX{tx_id}
                     </h2>
                     <span style="font-size: 0.86rem; color: #68707A;">Recorded Surveillance Timestamp: Step {tx.get('TIMESTAMP', 0)}</span>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 0.8rem; color: #68707A; font-weight: 600;">COMPOSITE RISK SCORE</div>
-                    <div style="font-size: 2.2rem; font-weight: 800; color: {'#DC2626' if score >= 0.65 else '#059669'};">
+                    <div style="font-size: 0.8rem; color: #68707A; font-weight: 700;">COMPOSITE RISK SCORE</div>
+                    <div style="font-size: 2.2rem; font-weight: 800; color: {'#DC2626' if score >= 0.65 else '#059669'}; line-height: 1.1;">
                         {score:.2f}
                     </div>
                     {render_risk_badge(risk_level)}
@@ -179,28 +185,28 @@ def render_transaction_details(tx_id: int):
     with c1:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.75rem; color: #68707A; font-weight: 600;">SENDER ACCOUNT</div>
+                <div style="font-size: 0.75rem; color: #68707A; font-weight: 700;">SENDER ACCOUNT</div>
                 <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">ACC_{tx['SENDER_ACCOUNT_ID']}</div>
             </div>
         """, unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.75rem; color: #68707A; font-weight: 600;">RECEIVER ACCOUNT</div>
+                <div style="font-size: 0.75rem; color: #68707A; font-weight: 700;">RECEIVER ACCOUNT</div>
                 <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">ACC_{tx['RECEIVER_ACCOUNT_ID']}</div>
             </div>
         """, unsafe_allow_html=True)
     with c3:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.75rem; color: #68707A; font-weight: 600;">TRANSACTION AMOUNT</div>
+                <div style="font-size: 0.75rem; color: #68707A; font-weight: 700;">TRANSACTION AMOUNT</div>
                 <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">₹{tx['TX_AMOUNT']:,.2f}</div>
             </div>
         """, unsafe_allow_html=True)
     with c4:
         st.markdown(f"""
             <div class="neo-card-sm">
-                <div style="font-size: 0.75rem; color: #68707A; font-weight: 600;">TRANSFER TYPE</div>
+                <div style="font-size: 0.75rem; color: #68707A; font-weight: 700;">TRANSFER TYPE</div>
                 <div style="font-size: 1.25rem; font-weight: 700; color: #20242A;">{tx.get('TX_TYPE', 'WIRE')}</div>
             </div>
         """, unsafe_allow_html=True)
@@ -257,18 +263,18 @@ def render_transaction_details(tx_id: int):
     with ca1:
         if st.button(f"Inspect Sender ACC_{tx['SENDER_ACCOUNT_ID']}", use_container_width=True):
             st.session_state.selected_account = int(tx['SENDER_ACCOUNT_ID'])
-            st.session_state.nav_section = "Accounts"
-            st.rerun()
+            if "Accounts" in pages_map:
+                st.switch_page(pages_map["Accounts"])
     with ca2:
         if st.button(f"Inspect Receiver ACC_{tx['RECEIVER_ACCOUNT_ID']}", use_container_width=True):
             st.session_state.selected_account = int(tx['RECEIVER_ACCOUNT_ID'])
-            st.session_state.nav_section = "Accounts"
-            st.rerun()
+            if "Accounts" in pages_map:
+                st.switch_page(pages_map["Accounts"])
     with ca3:
         if st.button("Explore in Network Graph", use_container_width=True, type="primary"):
             st.session_state.selected_network_account = int(tx['SENDER_ACCOUNT_ID'])
-            st.session_state.nav_section = "Network"
-            st.rerun()
+            if "Network" in pages_map:
+                st.switch_page(pages_map["Network"])
     with ca4:
         if st.button("← Back to Transactions", use_container_width=True):
             st.session_state.selected_transaction = None

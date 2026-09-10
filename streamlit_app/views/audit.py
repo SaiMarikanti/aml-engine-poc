@@ -1,4 +1,4 @@
-"""Audit Log Page - Enterprise Case Management Trail."""
+"""Audit Log View - Enterprise Case Management Trail."""
 import streamlit as st
 import pandas as pd
 from aml_app.services.data_service import data_service
@@ -6,7 +6,7 @@ from aml_app.services.data_service import data_service
 def render_audit():
     st.markdown("""
         <div style="margin-bottom: 18px;">
-            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 700; color: #1E3A8A;">INVESTIGATION AUDIT LOG</h2>
+            <h2 style="margin: 0; font-size: 1.6rem; font-weight: 800; color: #1E3A8A;">INVESTIGATION AUDIT LOG</h2>
             <p style="margin: 4px 0 0 0; color: #68707A; font-size: 0.9rem;">
                 Immutable trail of investigator actions, status transitions, comments, and regulatory triage decisions.
             </p>
@@ -24,10 +24,14 @@ def render_audit():
         refresh_clicked = st.button("REFRESH LOG", use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    df_audit = data_service.get_audit_trail(
-        limit=50,
-        user_filter=None if user_filter == "ALL" else user_filter
-    )
+    try:
+        df_audit = data_service.get_audit_trail(
+            limit=50,
+            user_filter=None if user_filter == "ALL" else user_filter
+        )
+    except Exception as e:
+        st.error(f"Failed to load audit trail: {e}")
+        df_audit = pd.DataFrame()
 
     if df_audit.empty:
         st.info("No audit logs recorded for this filter.")
