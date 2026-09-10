@@ -58,9 +58,9 @@ class AMLDataService:
             "otel_logs",
             "otel_metrics",
             "otel_annotations",
-            "app_alert_status",
-            "app_alert_comments",
-            "app_audit_log"
+            "alert_status",
+            "alert_comments",
+            "audit_log"
         ]
 
     def describe_table(self, table_name: str) -> pd.DataFrame:
@@ -70,7 +70,8 @@ class AMLDataService:
 
     def get_sample_rows(self, table_name: str, limit: int = 10) -> pd.DataFrame:
         if isinstance(self.repo, DatabricksRepository):
-            return self.repo.client.execute_query(f"SELECT * FROM {settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}.{table_name} LIMIT {limit}")
+            target_schema = settings.APP_SCHEMA if table_name in ("alert_status", "alert_comments", "audit_log") else settings.DATA_SCHEMA
+            return self.repo.client.execute_query(f"SELECT * FROM {settings.CATALOG}.{target_schema}.{table_name} LIMIT {limit}")
         return pd.DataFrame()
 
     def get_kpi_summary(self) -> Dict[str, Any]:

@@ -10,9 +10,16 @@ class Settings:
     APP_VERSION: str = "2.5.0"
     ENVIRONMENT: str = os.getenv("AML_ENV", "production")
     
-    # Target Unity Catalog & Schema
-    DATABRICKS_CATALOG: str = os.getenv("DATABRICKS_CATALOG", "aml_engine")
-    DATABRICKS_SCHEMA: str = os.getenv("DATABRICKS_SCHEMA", "aml_poc")
+    # Target Unity Catalog & Schemas
+    CATALOG: str = os.getenv("DATABRICKS_CATALOG", "aml_engine")
+    DATA_SCHEMA: str = os.getenv("DATABRICKS_DATA_SCHEMA", os.getenv("DATABRICKS_SCHEMA", "aml_poc"))
+    APP_SCHEMA: str = os.getenv("DATABRICKS_APP_SCHEMA", "aml_app")
+
+    # Backward compatibility aliases
+    DATABRICKS_CATALOG: str = CATALOG
+    DATABRICKS_SCHEMA: str = DATA_SCHEMA
+    DATABRICKS_DATA_SCHEMA: str = DATA_SCHEMA
+    DATABRICKS_APP_SCHEMA: str = APP_SCHEMA
     
     # Databricks SQL Warehouse Resource settings
     DATABRICKS_WAREHOUSE_ID: str = os.getenv("DATABRICKS_WAREHOUSE_ID", "")

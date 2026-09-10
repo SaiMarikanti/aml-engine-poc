@@ -218,10 +218,10 @@ def init_lakehouse(force_rebuild: bool = False) -> None:
     cur.execute("CREATE INDEX IF NOT EXISTS idx_accounts_id ON gold_accounts(ACCOUNT_ID)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_accounts_risk ON gold_accounts(RISK_SCORE)")
 
-    # 4. State / Writeback Application Tables
+    # 4. State / Writeback Application Tables (alert_status, alert_comments, audit_log)
     print("Creating case management application tables...")
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS app_alert_status (
+        CREATE TABLE IF NOT EXISTS alert_status (
             alert_id INTEGER PRIMARY KEY,
             status TEXT NOT NULL,
             assigned_to TEXT,
@@ -229,9 +229,8 @@ def init_lakehouse(force_rebuild: bool = False) -> None:
             updated_timestamp TEXT
         )
     """)
-
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS app_alert_comments (
+        CREATE TABLE IF NOT EXISTS alert_comments (
             comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
             alert_id INTEGER NOT NULL,
             comment_text TEXT NOT NULL,
@@ -239,9 +238,8 @@ def init_lakehouse(force_rebuild: bool = False) -> None:
             created_timestamp TEXT NOT NULL
         )
     """)
-
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS app_audit_log (
+        CREATE TABLE IF NOT EXISTS audit_log (
             audit_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id TEXT NOT NULL,
             action TEXT NOT NULL,
@@ -252,6 +250,10 @@ def init_lakehouse(force_rebuild: bool = False) -> None:
             timestamp TEXT NOT NULL
         )
     """)
+    # Backwards compatibility views/tables
+    cur.execute("CREATE TABLE IF NOT EXISTS app_alert_status AS SELECT * FROM alert_status")
+    cur.execute("CREATE TABLE IF NOT EXISTS app_alert_comments AS SELECT * FROM alert_comments")
+    cur.execute("CREATE TABLE IF NOT EXISTS app_audit_log AS SELECT * FROM audit_log")
 
     # Populate verified initial case notes
     sample_comments = [

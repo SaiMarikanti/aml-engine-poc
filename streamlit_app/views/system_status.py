@@ -28,7 +28,8 @@ def render_system_status():
     health_items = [
         ("Databricks App", "Healthy", "#059669", "App container and web server active"),
         ("SQL Warehouse", "Available" if data_service.is_cloud_mode else "Active (Local Adapter)", "#059669", f"Resource key: sql-warehouse ({settings.DATABRICKS_WAREHOUSE_ID or 'Serverless Starter Warehouse'})"),
-        ("Unity Catalog", "Accessible" if data_service.is_cloud_mode else "Verified", "#059669", f"Target namespace: {settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}"),
+        ("Analytical Data (SELECT)", "Accessible" if data_service.is_cloud_mode else "Verified", "#059669", f"Target: {settings.CATALOG}.{settings.DATA_SCHEMA} (Read-only)"),
+        ("App State (SELECT + MODIFY)", "Accessible" if data_service.is_cloud_mode else "Verified", "#059669", f"Target: {settings.CATALOG}.{settings.APP_SCHEMA} (Persistent triage & audit)"),
         ("Silver Tables", "Available", "#059669", "silver_accounts, silver_transactions, silver_alerts"),
         ("Rule Engine Output", "Available", "#059669", "rule_results, rule_transaction_scores (Deterministic rules)"),
         ("Graph Output", "Available", "#059669", "graph_account_features (Network topology & centrality)"),
@@ -63,10 +64,12 @@ def render_system_status():
     with col_cfg1:
         st.markdown(f"""
             <div style="font-size: 0.9rem; color: #20242A; line-height: 2;">
-                <b>Catalog:</b> <code>{backend_info.get('catalog', settings.DATABRICKS_CATALOG)}</code><br>
-                <b>Schema:</b> <code>{backend_info.get('schema', settings.DATABRICKS_SCHEMA)}</code><br>
+                <b>Catalog:</b> <code>{backend_info.get('catalog', settings.CATALOG)}</code><br>
+                <b>Data Schema (SELECT):</b> <code>{backend_info.get('data_schema', settings.DATA_SCHEMA)}</code><br>
+                <b>App Schema (MODIFY):</b> <code>{backend_info.get('app_schema', settings.APP_SCHEMA)}</code><br>
                 <b>Warehouse:</b> <code>{settings.DATABRICKS_WAREHOUSE_ID or 'Serverless Starter Warehouse'}</code><br>
                 <b>Authenticated Identity:</b> <code>{backend_info.get('identity', 'Databricks App Service Principal')}</code><br>
+                <b>Persistence Mode:</b> <code>{backend_info.get('persistence_mode', 'Unity Catalog Delta')}</code><br>
                 <b>Runtime Environment:</b> <span class="status-chip status-closed">{backend_info.get('mode', 'Databricks Apps Production')}</span>
             </div>
         """, unsafe_allow_html=True)
@@ -82,7 +85,7 @@ def render_system_status():
             if success:
                 st.success(f"✓ {msg}")
                 ident = databricks_service.get_identity_info()
-                st.info(f"**Identity Confirmed:** Catalog: `{ident['catalog']}` | Schema: `{ident['schema']}` | Principal: `{ident['identity']}`")
+                st.info(f"**Identity Confirmed:** Catalog: `{ident['catalog']}` | Data Schema: `{settings.DATA_SCHEMA}` | App Schema: `{settings.APP_SCHEMA}` | Principal: `{ident['identity']}`")
             else:
                 st.warning(f"Connection Notice: {msg}")
 
@@ -94,7 +97,7 @@ def render_system_status():
     
     tables = data_service.get_discovered_tables()
     if tables or discover_btn:
-        st.markdown(f"**Discovered Tables in `{settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}` ({len(tables)} tables):**")
+        st.markdown(f"**Discovered Tables in `{settings.CATALOG}` ({len(tables)} tables across `{settings.DATA_SCHEMA}` & `{settings.APP_SCHEMA}`):**")
         
         badges_html = " ".join([f'<span style="background: #E0E7FF; color: #3730A3; padding: 4px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; margin: 3px; display: inline-block;">{t}</span>' for t in tables])
         st.markdown(f"<div>{badges_html}</div>", unsafe_allow_html=True)
@@ -112,8 +115,9 @@ def render_system_status():
             with st.spinner(f"Querying {selected_table}..."):
                 try:
                     df_sample = data_service.get_sample_rows(selected_table, limit=10)
+                    target_schema = settings.APP_SCHEMA if selected_table in ("alert_status", "alert_comments", "audit_log") else settings.DATA_SCHEMA
                     if not df_sample.empty:
-                        st.markdown(f"**Sample Records from `{settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}.{selected_table}` (First 10 rows):**")
+                        st.markdown(f"**Sample Records from `{settings.CATALOG}.{target_schema}.{selected_table}` (First 10 rows):**")
                         st.dataframe(df_sample, use_container_width=True)
                     else:
                         st.caption("Table is empty or sample unavailable.")
