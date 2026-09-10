@@ -252,12 +252,73 @@ def render_alert_investigation(alert_id: int):
     gr = alert.get("graph_results") or {}
     snd_id = int(alert['SENDER_ACCOUNT_ID'])
     rcv_id = int(alert['RECEIVER_ACCOUNT_ID'])
-    c_acc = int(gr.get("account_c", (snd_id * 31 + rcv_id * 17) % 9999 + 1))
-    cycle_id = gr.get("cycle_id", f"CYC-{snd_id}-{rcv_id}-{c_acc}")
-    time_span = gr.get("cycle_time_span", 2)
-    graph_score = gr.get("graph_rule_score", 50.0)
-    graph_evidence = gr.get("graph_evidence", f"Circular transaction sequence: ACC_{snd_id} ──► ACC_{rcv_id} ──► ACC_{c_acc} ──► ACC_{snd_id}")
-    rule_name = gr.get("rule_name", "CYCLE_DETECTION")
+    has_cycle = bool(gr and gr.get("cycle_id"))
+
+    if has_cycle:
+        c_acc = int(gr.get("account_c", 0))
+        cycle_id = str(gr.get("cycle_id", "N/A"))
+        time_span = gr.get("cycle_time_span", 2)
+        graph_score = float(gr.get("graph_rule_score", 50.0))
+        graph_evidence = str(gr.get("graph_evidence", f"Circular transaction sequence: ACC_{snd_id} ──► ACC_{rcv_id} ──► ACC_{c_acc} ──► ACC_{snd_id}"))
+        rule_name = str(gr.get("rule_name", "CYCLE_DETECTION"))
+        motif_type = "CIRCULAR RING (CYCLE)"
+
+        motif_inner_html = f"""
+            <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Originator (Sender)</div>
+                </div>
+                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                    <div>──(₹{alert['TX_AMOUNT']:,.2f})──►</div>
+                    <div style="font-size: 0.68rem; color: #64748B;">Step {alert.get('TIMESTAMP', 1)}</div>
+                </div>
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #7C3AED; background: #FFFFFF; padding: 8px 16px; border: 1px solid #DDD6FE; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Intermediary Relay</div>
+                </div>
+                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                    <div>────►</div>
+                    <div style="font-size: 0.68rem; color: #64748B;">Relay Edge</div>
+                </div>
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{c_acc}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Layering Mule / Node C</div>
+                </div>
+                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                    <div>──(Cycle Loop)──►</div>
+                    <div style="font-size: 0.68rem; color: #64748B;">Return to Origin</div>
+                </div>
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Closed Cycle</div>
+                </div>
+            </div>
+        """
+    else:
+        cycle_id = "None (Acyclic)"
+        time_span = 0
+        graph_score = 0.0
+        graph_evidence = f"Direct transfer from ACC_{snd_id} to ACC_{rcv_id}. No circular cycle detected in GraphFrames precomputed graph_results."
+        rule_name = "DIRECT_TRANSFER"
+        motif_type = "DIRECT TRANSFER (ACYCLIC)"
+
+        motif_inner_html = f"""
+            <div style="display: flex; align-items: center; justify-content: center; gap: 32px; padding: 18px 6px;">
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Sender Vertex</div>
+                </div>
+                <div style="color: #2563EB; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                    <div>──────(₹{alert['TX_AMOUNT']:,.2f})──────►</div>
+                    <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">Direct Transfer Edge</div>
+                </div>
+                <div style="text-align: center;">
+                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
+                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Receiver Vertex</div>
+                </div>
+            </div>
+        """
 
     topology_html = textwrap.dedent(f"""
         <div class="neo-card" style="padding: 22px 26px;">
@@ -270,36 +331,7 @@ def render_alert_investigation(alert_id: int):
             </div>
             <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.</div>
             <div class="neo-graph-motif">
-                <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">
-                    <div style="text-align: center;">
-                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
-                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Originator (Sender)</div>
-                    </div>
-                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                        <div>──(₹{alert['TX_AMOUNT']:,.2f})──►</div>
-                        <div style="font-size: 0.68rem; color: #64748B;">Step {alert.get('TIMESTAMP', 1)}</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #7C3AED; background: #FFFFFF; padding: 8px 16px; border: 1px solid #DDD6FE; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
-                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Intermediary Relay</div>
-                    </div>
-                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                        <div>────►</div>
-                        <div style="font-size: 0.68rem; color: #64748B;">Relay Edge</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{c_acc}</span>
-                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Layering Mule / Node C</div>
-                    </div>
-                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                        <div>──(Cycle Loop)──►</div>
-                        <div style="font-size: 0.68rem; color: #64748B;">Return to Origin</div>
-                    </div>
-                    <div style="text-align: center;">
-                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
-                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Closed Cycle</div>
-                    </div>
-                </div>
+                {motif_inner_html}
             </div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 0.82rem;">
                 <div>
@@ -311,12 +343,12 @@ def render_alert_investigation(alert_id: int):
                     <b style="color: #7C3AED;">{graph_score:.1f} / 100</b>
                 </div>
                 <div>
-                    <span style="color: #64748B;">Cycle Time Span (Δt):</span><br>
+                    <span style="color: #64748B;">Cycle Time Span:</span><br>
                     <b style="color: #0F172A;">{time_span} surveillance steps</b>
                 </div>
                 <div>
                     <span style="color: #64748B;">Motif Classification:</span><br>
-                    <span class="badge-violet">CIRCULAR RING</span>
+                    <span class="badge-violet">{motif_type}</span>
                 </div>
             </div>
             <div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.82rem; color: #334155;">

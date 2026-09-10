@@ -25,10 +25,10 @@ def render_header(pages_map: Optional[Dict[str, Any]] = None):
                 </div>
                 <div>
                     <div style="font-size: 1.15rem; font-weight: 800; color: #1E3A8A; letter-spacing: -0.01em; line-height: 1.2;">
-                        AML INTELLIGENCE
+                        AML MONITORING CENTER
                     </div>
                     <div style="font-size: 0.75rem; color: #68707A; font-weight: 500;">
-                        Lakehouse Surveillance
+                        Surveillance Overview
                     </div>
                 </div>
             </div>

@@ -49,12 +49,12 @@ def render_model_insights():
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <span class="status-chip status-closed">TRACKED IN MLFLOW</span>
+                    <span class="status-chip" style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; font-weight: 800;">RUN STATUS: FAILED</span>
                     <div style="font-size: 0.8rem; color: #68707A; margin-top: 4px;">Owner: <b>{insights.get('owner', 'zs7919320@gmail.com')}</b></div>
                 </div>
             </div>
-            <div style="margin-top: 10px; padding: 6px 12px; background: #FEF3C7; border-left: 3px solid #D97706; border-radius: 4px; font-size: 0.8rem; color: #92400E;">
-                <b>MLflow Run Status:</b> Baseline evaluation metrics recorded in MLflow run <code>{insights.get('run_name', 'aml_xgboost_final')}</code>. (Note: Registry write to Unity Catalog requires UC Model Registry permissions).
+            <div style="margin-top: 10px; padding: 6px 12px; background: #FEF2F2; border-left: 3px solid #DC2626; border-radius: 4px; font-size: 0.8rem; color: #991B1B;">
+                <b>MLflow Run Status: FAILED</b> — Holdout evaluation metrics were logged, but the run failed during Unity Catalog Model Registry registration (permission constraints). Not registered as production.
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -62,8 +62,8 @@ def render_model_insights():
     # 2. Hyperparameters Pill Bar
     if hp:
         st.markdown(f"""
-            <div class="neo-card-sm" style="background: #F8FAFC; padding: 12px 18px; margin-bottom: 16px; border: 1px solid #E2E8F0; border-radius: 8px;">
-                <div style="font-size: 0.8rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">TUNED HYPERPARAMETERS (MLFLOW LOGGED):</div>
+            <div class="neo-card-sm" style="background: #F8FAFC; padding: 14px 18px; margin-bottom: 16px; border: 1px solid #E2E8F0; border-radius: 8px;">
+                <div style="font-size: 0.82rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.04em; margin-bottom: 8px;">MODEL HYPERPARAMETERS (MLFLOW LOGGED):</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82rem; color: #374151;">
                     <span class="code-pill">n_estimators: {hp.get('n_estimators', 300)}</span>
                     <span class="code-pill">max_depth: {hp.get('max_depth', 6)}</span>
@@ -102,11 +102,17 @@ def render_model_insights():
     with c4:
         render_kpi_card("PRECISION", f"{metrics['precision']*100:.1f}%", "2,372 false positives (0.98 threshold)", trend_positive=False, alert_level="warning")
 
-    # 5. Operational Trade-Off Callout
-    st.markdown("""
-        <div style="background: #EFF6FF; border-left: 4px solid #2563EB; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 0.86rem; color: #1E40AF;">
-            <b>Operational Context:</b> High recall (<b>90.9%</b>) ensures investigators capture the vast majority of money laundering schemes. 
-            The low precision (<b>9.5%</b>) reflects the extreme real-world class imbalance (20:1) and the conservative <b>0.98 threshold</b> configured to minimize false negatives (missed fraud).
+    # 5. Operational Trade-Off Callout (Honest AML Interpretation)
+    st.markdown(f"""
+        <div style="background: #FEF3C7; border-left: 4px solid #D97706; padding: 14px 18px; margin: 16px 0; border-radius: 6px; font-size: 0.86rem; color: #92400E;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 0.92rem; margin-bottom: 6px;">
+                <span>⚠️ AML OPERATIONAL ASSESSMENT: HIGH RECALL • LOW PRECISION</span>
+            </div>
+            <div style="line-height: 1.5;">
+                • <b>High Recall ({metrics['recall']*100:.1f}%):</b> Captures 249 of 274 true laundering schemes in the holdout test set.<br/>
+                • <b>Low Precision ({metrics['precision']*100:.1f}%):</b> Generates 2,372 false alarms at the conservative 0.98 decision threshold.<br/>
+                • <b>Operational Trade-Off:</b> Useful for high-sensitivity surveillance screening to avoid missed laundering, but generates substantial investigator triage workload.
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
