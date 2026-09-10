@@ -42,38 +42,38 @@ def render_sidebar(current_page: Optional[Any] = None, pages_map: Optional[Dict[
             </div>
         """, unsafe_allow_html=True)
 
-        # Helper for rendering page buttons
-        def nav_button(title: str, icon_name: str, page_key: str):
-            is_active = (current_title == title)
+        # Helper for rendering page buttons (compatible across Streamlit versions)
+        def nav_button(page_title: str, label: str, page_key: str):
+            is_active = (current_title == page_title)
             button_type = "primary" if is_active else "secondary"
-            target_page = pages.get(title)
+            target_page = pages.get(page_title)
             
-            if st.button(title, icon=icon_name, key=f"nav_{page_key}", type=button_type, use_container_width=True):
+            if st.button(label, key=f"nav_{page_key}", type=button_type, use_container_width=True):
                 if target_page is not None:
                     st.switch_page(target_page)
 
         # Section 1: HOME
         st.markdown('<div class="neo-sidebar-header">HOME</div>', unsafe_allow_html=True)
-        nav_button("Dashboard", ":material/dashboard:", "dashboard")
+        nav_button("Dashboard", "📊 Dashboard", "dashboard")
 
         # Section 2: INVESTIGATION
         st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">INVESTIGATION</div>', unsafe_allow_html=True)
-        nav_button("Transactions", ":material/payments:", "transactions")
-        nav_button("Alerts", ":material/notifications_active:", "alerts")
-        nav_button("Accounts", ":material/account_balance:", "accounts")
-        nav_button("Network", ":material/hub:", "network")
+        nav_button("Transactions", "💳 Transactions", "transactions")
+        nav_button("Alerts", "🚨 Alerts", "alerts")
+        nav_button("Accounts", "🏛 Accounts", "accounts")
+        nav_button("Network", "🕸 Network", "network")
 
         # Section 3: INTELLIGENCE
         st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">INTELLIGENCE</div>', unsafe_allow_html=True)
-        nav_button("Model Insights", ":material/monitoring:", "model_insights")
+        nav_button("Model Insights", "🧠 Model Insights", "model_insights")
 
         # Section 4: ADMINISTRATION
         st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">ADMINISTRATION</div>', unsafe_allow_html=True)
-        nav_button("Audit Log", ":material/history:", "audit")
-        nav_button("System Status", ":material/health_and_safety:", "system_status")
+        nav_button("Audit Log", "📜 Audit Log", "audit")
+        nav_button("System Status", "⚡ System Status", "system_status")
 
         # Bottom Widget: Databricks Lakehouse Health Status Plate
         st.markdown(f"""
