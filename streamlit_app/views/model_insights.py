@@ -109,63 +109,158 @@ def render_model_insights():
         </div>
     """, unsafe_allow_html=True)
 
-    # 6. Visualizations: Feature Importance (Gain) & Confusion Matrix
-    col_feat, col_matrix = st.columns([1.4, 1])
+    # 6. Visualizations: Differentiated Feature Importance (Gain) & Confusion Matrix
+    col_feat, col_matrix = st.columns([1.35, 1.15])
+
+    def _get_feature_color(feat_name: str) -> str:
+        f = str(feat_name).lower()
+        if "cycle" in f or "fan" in f or "graph" in f:
+            return "#7C3AED"  # Royal Violet (Graph Topologies)
+        elif "velocity" in f or "unique" in f or "count" in f:
+            return "#0891B2"  # Vibrant Cyan/Teal (Behavioral Counts & Velocity)
+        elif "amount" in f or "value" in f or "flag" in f:
+            return "#2563EB"  # Cobalt Indigo (Financial Value & Flags)
+        elif "time" in f or "step" in f or "date" in f:
+            return "#D97706"  # Warm Amber (Temporal Sequence)
+        return "#4F46E5"
 
     with col_feat:
-        st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">XGBOOST FEATURE IMPORTANCE (GAIN)</div>', unsafe_allow_html=True)
-        st.caption("Relative information gain per engineered feature from ml_training_data.")
+        st.markdown("""
+            <div class="neo-card" style="padding: 22px 24px; height: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
+                        XGBOOST FEATURE IMPORTANCE (GAIN)
+                    </div>
+                    <span class="badge-indigo">ML EXPLAINABILITY</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 12px;">
+                    Relative information gain per engineered feature from <code>ml_training_data</code>.
+                </div>
+        """, unsafe_allow_html=True)
         
         df_feat = pd.DataFrame(insights["feature_importance"])
         df_feat = df_feat.sort_values(by="importance", ascending=True)
+        bar_colors = [_get_feature_color(fn) for fn in df_feat["feature"]]
         
         fig_feat = go.Figure(go.Bar(
             x=df_feat["importance"],
             y=df_feat["feature"],
             orientation='h',
-            marker_color='#1E3A8A',
+            marker=dict(
+                color=bar_colors,
+                line=dict(color='rgba(255, 255, 255, 0.6)', width=1)
+            ),
             text=[f"{val*100:.1f}%" for val in df_feat["importance"]],
-            textposition='outside'
+            textposition='outside',
+            textfont=dict(family="JetBrains Mono, monospace", size=11, color="#1E293B")
         ))
         fig_feat.update_layout(
-            margin=dict(l=10, r=40, t=10, b=20),
-            height=310,
+            margin=dict(l=10, r=45, t=5, b=10),
+            height=280,
             paper_bgcolor='rgba(0,0,0,0)',
             plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(title="Relative Information Gain", range=[0, 0.35], showgrid=True, gridcolor="#DFE4EA"),
-            yaxis=dict(showgrid=False)
+            xaxis=dict(
+                title=dict(text="Relative Information Gain", font=dict(size=11, color="#64748B")),
+                range=[0, 0.32],
+                showgrid=True,
+                gridcolor="#E2E8F0"
+            ),
+            yaxis=dict(
+                showgrid=False,
+                tickfont=dict(size=11, family="JetBrains Mono, monospace", color="#334155")
+            )
         )
         st.plotly_chart(fig_feat, use_container_width=True, config={'displayModeBar': False})
-        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Color Category Legend
+        st.markdown("""
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 0.74rem;">
+                <span style="display: inline-flex; align-items: center; gap: 4px; color: #1E40AF; font-weight: 600;">
+                    <span style="width: 9px; height: 9px; border-radius: 50%; background: #2563EB;"></span> Value & Flags (30%)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; color: #0E7490; font-weight: 600;">
+                    <span style="width: 9px; height: 9px; border-radius: 50%; background: #0891B2;"></span> Velocity & Counts (41%)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; color: #6D28D9; font-weight: 600;">
+                    <span style="width: 9px; height: 9px; border-radius: 50%; background: #7C3AED;"></span> Graph Topology (24%)
+                </span>
+                <span style="display: inline-flex; align-items: center; gap: 4px; color: #B45309; font-weight: 600;">
+                    <span style="width: 9px; height: 9px; border-radius: 50%; background: #D97706;"></span> Temporal Sequence (5%)
+                </span>
+            </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     with col_matrix:
-        st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
-        st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">HOLDOUT CONFUSION MATRIX</div>', unsafe_allow_html=True)
-        st.caption("Holdout evaluation: 249 caught fraud vs 2,372 false alarms.")
-
         cm = insights["confusion_matrix"]
-        cm_data = [
-            [cm["true_negative"], cm["false_positive"]],
-            [cm["false_negative"], cm["true_positive"]]
-        ]
+        tn = cm["true_negative"]
+        fp = cm["false_positive"]
+        fn = cm["false_negative"]
+        tp = cm["true_positive"]
         
-        fig_cm = go.Figure(data=go.Heatmap(
-            z=cm_data,
-            x=['Predicted Legitimate', 'Predicted Laundering'],
-            y=['Actual Legitimate', 'Actual Laundering'],
-            colorscale=[[0, '#F1F4F8'], [1, '#1E3A8A']],
-            showscale=False,
-            text=[[f"{cm['true_negative']:,}", f"{cm['false_positive']:,}"],
-                  [f"{cm['false_negative']:,}", f"{cm['true_positive']:,}"]],
-            texttemplate="%{text}",
-            textfont={"size": 14, "color": "white"}
-        ))
-        fig_cm.update_layout(
-            margin=dict(l=20, r=20, t=20, b=20),
-            height=310,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)'
-        )
-        st.plotly_chart(fig_cm, use_container_width=True, config={'displayModeBar': False})
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="neo-card" style="padding: 22px 24px; height: 100%;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
+                        HOLDOUT CONFUSION MATRIX
+                    </div>
+                    <span class="badge-violet">HOLDOUT EVALUATION</span>
+                </div>
+                <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 12px;">
+                    Holdout evaluation: <b>{tp:,} caught fraud</b> vs <b>{fp:,} false alarms</b>.
+                </div>
+                
+                <!-- Axis Headers -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 6px; text-align: center;">
+                    <div style="font-size: 0.72rem; font-weight: 800; color: #475569; letter-spacing: 0.06em;">PRED: LEGITIMATE</div>
+                    <div style="font-size: 0.72rem; font-weight: 800; color: #475569; letter-spacing: 0.06em;">PRED: LAUNDERING</div>
+                </div>
+
+                <!-- 2x2 Neumorphic Quad Matrix -->
+                <div class="neo-matrix-grid">
+                    <!-- Top-Left: True Negative -->
+                    <div class="neo-matrix-cell matrix-tn">
+                        <div>
+                            <div class="matrix-val" style="color: #065F46;">{tn:,}</div>
+                            <div class="matrix-lbl" style="color: #047857;">TRUE NEGATIVE</div>
+                        </div>
+                        <div class="matrix-sub">Legitimate cleared (99.1%)</div>
+                    </div>
+
+                    <!-- Top-Right: False Positive -->
+                    <div class="neo-matrix-cell matrix-fp">
+                        <div>
+                            <div class="matrix-val" style="color: #92400E;">{fp:,}</div>
+                            <div class="matrix-lbl" style="color: #B45309;">FALSE ALARM (FP)</div>
+                        </div>
+                        <div class="matrix-sub">Investigated & cleared (0.9%)</div>
+                    </div>
+
+                    <!-- Bottom-Left: False Negative -->
+                    <div class="neo-matrix-cell matrix-fn">
+                        <div>
+                            <div class="matrix-val" style="color: #991B1B;">{fn:,}</div>
+                            <div class="matrix-lbl" style="color: #DC2626;">MISSED FRAUD (FN)</div>
+                        </div>
+                        <div class="matrix-sub">Stealth evasion (9.1%)</div>
+                    </div>
+
+                    <!-- Bottom-Right: True Positive -->
+                    <div class="neo-matrix-cell matrix-tp">
+                        <div>
+                            <div class="matrix-val" style="color: #4C1D95;">{tp:,}</div>
+                            <div class="matrix-lbl" style="color: #6D28D9;">CAUGHT FRAUD (TP)</div>
+                        </div>
+                        <div class="matrix-sub">Laundering detected (90.9%)</div>
+                    </div>
+                </div>
+
+                <!-- Diagnostic KPI Footer -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 0.75rem;">
+                    <span style="color: #065F46; font-weight: 700;">Specificity: 99.1%</span>
+                    <span style="color: #6D28D9; font-weight: 700;">Recall: 90.9%</span>
+                    <span style="color: #B45309; font-weight: 700;">Precision: 9.5%</span>
+                    <span style="color: #475569; font-weight: 700;">Threshold: 0.98</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)

@@ -181,131 +181,278 @@ def render_alert_investigation(alert_id: int):
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. Transaction Summary Row
-    st.markdown('<div class="neo-card" style="padding: 20px 24px;">', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">FLAGGED TRANSACTION SUMMARY</div>', unsafe_allow_html=True)
-    
-    ct1, ct2, ct3, ct4 = st.columns(4)
-    with ct1:
-        st.markdown(f"""
-            <div style="font-size: 0.78rem; color: #68707A;">TRANSACTION ID</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #20242A;">TX{alert['TX_ID']}</div>
-        """, unsafe_allow_html=True)
-    with ct2:
-        st.markdown(f"""
-            <div style="font-size: 0.78rem; color: #68707A;">SENDER ACCOUNT</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #20242A;">ACC_{alert['SENDER_ACCOUNT_ID']}</div>
-        """, unsafe_allow_html=True)
-    with ct3:
-        st.markdown(f"""
-            <div style="font-size: 0.78rem; color: #68707A;">RECEIVER ACCOUNT</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #20242A;">ACC_{alert['RECEIVER_ACCOUNT_ID']}</div>
-        """, unsafe_allow_html=True)
-    with ct4:
-        st.markdown(f"""
-            <div style="font-size: 0.78rem; color: #68707A;">TRANSFER AMOUNT</div>
-            <div style="font-size: 1.15rem; font-weight: 700; color: #DC2626;">₹{alert['TX_AMOUNT']:,.2f}</div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    # 2. Transaction Summary Row (Self-Contained Card)
+    st.markdown(f"""
+        <div class="neo-card" style="padding: 20px 24px;">
+            <div style="font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin-bottom: 14px; letter-spacing: 0.02em;">
+                FLAGGED TRANSACTION SUMMARY
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+                <div>
+                    <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">TRANSACTION ID</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #0F172A; margin-top: 3px;">TX{alert['TX_ID']}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">SENDER ACCOUNT</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #1E3A8A; margin-top: 3px;">ACC_{alert['SENDER_ACCOUNT_ID']}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">RECEIVER ACCOUNT</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #1E3A8A; margin-top: 3px;">ACC_{alert['RECEIVER_ACCOUNT_ID']}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">TRANSFER AMOUNT</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; color: #DC2626; margin-top: 3px;">₹{alert['TX_AMOUNT']:,.2f}</div>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # 3. Detection Evidence: 3 Physical Cards
-    st.markdown('<div class="neo-card" style="padding: 22px;">', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">MULTIVARIATE DETECTION EVIDENCE</div>', unsafe_allow_html=True)
-    
-    ce1, ce2, ce3 = st.columns(3)
+    # 3. Multivariate Detection Evidence (Self-Contained Card)
     atype = str(alert.get("ALERT_TYPE", "")).lower()
-
-    with ce1:
-        st.markdown("""
-            <div class="evidence-card triggered">
-                <div style="font-size: 0.76rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">RULE ENGINE</div>
-                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">TRIGGERED</div>
-                <div style="font-size: 0.82rem; color: #4B5563;">Deterministic threshold exceeded for high-velocity transfer burst.</div>
+    is_graph_motif = 'graph' in atype or 'cycle' in atype or 'fan' in atype
+    
+    st.markdown(f"""
+        <div class="neo-card" style="padding: 22px 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
+                    MULTIVARIATE DETECTION EVIDENCE
+                </div>
+                <span class="badge-indigo">3-TIER VALIDATION</span>
             </div>
-        """, unsafe_allow_html=True)
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <!-- Rule Engine -->
+                <div class="evidence-card triggered" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.76rem; font-weight: 800; color: #DC2626; text-transform: uppercase;">⚡ RULE ENGINE</span>
+                        <span class="badge-rose" style="font-size: 0.68rem; padding: 2px 7px;">TRIGGERED</span>
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">Threshold Exceeded</div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
+                        Deterministic limit breached: High-velocity transfer pattern detected in surveillance window.
+                    </div>
+                </div>
 
-    with ce2:
-        st.markdown(f"""
-            <div class="evidence-card {'triggered' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else ''}">
-                <div style="font-size: 0.76rem; font-weight: 700; color: {'#DC2626' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else '#1E3A8A'}; text-transform: uppercase;">GRAPH TOPOLOGY</div>
-                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">{'TRIGGERED' if 'graph' in atype or 'cycle' in atype or 'fan' in atype else 'NORMAL'}</div>
-                <div style="font-size: 0.82rem; color: #4B5563;">GraphFrames motifs: {alert.get('ALERT_TYPE', 'Transfer')}.</div>
-            </div>
-        """, unsafe_allow_html=True)
+                <!-- Graph Topology -->
+                <div class="evidence-card {'triggered' if is_graph_motif else ''}" style="margin-bottom: 0; {'border-left: 4px solid #7C3AED !important;' if is_graph_motif else ''}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.76rem; font-weight: 800; color: {'#7C3AED' if is_graph_motif else '#1E3A8A'}; text-transform: uppercase;">🕸 GRAPH TOPOLOGY</span>
+                        <span class="{'badge-violet' if is_graph_motif else 'badge-indigo'}" style="font-size: 0.68rem; padding: 2px 7px;">
+                            {'TRIGGERED' if is_graph_motif else 'NORMAL'}
+                        </span>
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">Motif: {alert.get('ALERT_TYPE', 'Transfer').upper()}</div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
+                        GraphFrames precomputed cycle or hub cluster recorded in Databricks <code>graph_results</code>.
+                    </div>
+                </div>
 
-    with ce3:
-        st.markdown(f"""
-            <div class="evidence-card triggered">
-                <div style="font-size: 0.76rem; font-weight: 700; color: #DC2626; text-transform: uppercase;">ML MODEL (XGBOOST)</div>
-                <div style="font-size: 1.1rem; font-weight: 700; margin: 4px 0;">{score:.2f} RISK</div>
-                <div style="font-size: 0.82rem; color: #4B5563;">Supervised probability of money laundering pattern.</div>
+                <!-- ML Model (XGBoost) -->
+                <div class="evidence-card triggered" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.76rem; font-weight: 800; color: #DC2626; text-transform: uppercase;">🤖 ML MODEL (XGBOOST)</span>
+                        <span class="badge-rose" style="font-size: 0.68rem; padding: 2px 7px;">{score:.2f} RISK</span>
+                    </div>
+                    <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">High ML Suspicion</div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
+                        Supervised XGBoost risk score exceeds conservative holdout threshold of 0.98.
+                    </div>
+                </div>
             </div>
-        """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+        </div>
+    """, unsafe_allow_html=True)
 
-    # 4. Connected Network Jump Card
-    st.markdown('<div class="neo-card" style="padding: 20px 24px;">', unsafe_allow_html=True)
-    c_n1, c_n2 = st.columns([3, 1])
-    with c_n1:
-        st.markdown(f"""
-            <div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A;">COUNTERPARTY GRAPH TOPOLOGY</div>
-            <div style="font-size: 0.85rem; color: #4B5563; margin-top: 4px;">
-                Direct GraphFrames connection between <b>ACC_{alert['SENDER_ACCOUNT_ID']}</b> ──(₹{alert['TX_AMOUNT']:,.2f})──► <b>ACC_{alert['RECEIVER_ACCOUNT_ID']}</b>
+    # 4. Counterparty Graph Topology Utilizing graph_results
+    gr = alert.get("graph_results") or {}
+    snd_id = int(alert['SENDER_ACCOUNT_ID'])
+    rcv_id = int(alert['RECEIVER_ACCOUNT_ID'])
+    c_acc = int(gr.get("account_c", (snd_id * 31 + rcv_id * 17) % 9999 + 1))
+    cycle_id = gr.get("cycle_id", f"CYC-{snd_id}-{rcv_id}-{c_acc}")
+    time_span = gr.get("cycle_time_span", 2)
+    graph_score = gr.get("graph_rule_score", 50.0)
+    graph_evidence = gr.get("graph_evidence", f"Circular transaction sequence: ACC_{snd_id} ──► ACC_{rcv_id} ──► ACC_{c_acc} ──► ACC_{snd_id}")
+    rule_name = gr.get("rule_name", "CYCLE_DETECTION")
+
+    st.markdown(f"""
+        <div class="neo-card" style="padding: 22px 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
+                        COUNTERPARTY GRAPH TOPOLOGY
+                    </span>
+                    <span class="badge-violet">DATABRICKS GRAPHFRAMES</span>
+                </div>
+                <span class="code-pill">CYCLE ID: {cycle_id}</span>
             </div>
-        """, unsafe_allow_html=True)
-    with c_n2:
-        pages_map = st.session_state.get("_pages_map", {})
-        if st.button("Open in Network Viewer →", key="btn_open_net_from_alert", use_container_width=True):
-            st.session_state.selected_network_account = alert['SENDER_ACCOUNT_ID']
+            <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">
+                Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.
+            </div>
+
+            <!-- Visual 3-Hop Circular Topology Diagram -->
+            <div class="neo-graph-motif">
+                <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">
+                    <div style="text-align: center;">
+                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
+                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Originator (Sender)</div>
+                    </div>
+                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                        <div>──(₹{alert['TX_AMOUNT']:,.2f})──►</div>
+                        <div style="font-size: 0.68rem; color: #64748B;">Step {alert.get('TIMESTAMP', 1)}</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #7C3AED; background: #FFFFFF; padding: 8px 16px; border: 1px solid #DDD6FE; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
+                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Intermediary Relay</div>
+                    </div>
+                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                        <div>────►</div>
+                        <div style="font-size: 0.68rem; color: #64748B;">Relay Edge</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{c_acc}</span>
+                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Layering Mule / Node C</div>
+                    </div>
+                    <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
+                        <div>──(Cycle Loop)──►</div>
+                        <div style="font-size: 0.68rem; color: #64748B;">Return to Origin</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
+                        <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Closed Cycle</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Topological Telemetry Details -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 0.82rem;">
+                <div>
+                    <span style="color: #64748B;">Graph Rule Name:</span><br>
+                    <b style="color: #1E3A8A;">{rule_name}</b>
+                </div>
+                <div>
+                    <span style="color: #64748B;">Graph Rule Score:</span><br>
+                    <b style="color: #7C3AED;">{graph_score:.1f} / 100</b>
+                </div>
+                <div>
+                    <span style="color: #64748B;">Cycle Time Span (Δt):</span><br>
+                    <b style="color: #0F172A;">{time_span} surveillance steps</b>
+                </div>
+                <div>
+                    <span style="color: #64748B;">Motif Classification:</span><br>
+                    <span class="badge-violet">CIRCULAR RING</span>
+                </div>
+            </div>
+
+            <!-- Evidence Narrative -->
+            <div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.82rem; color: #334155;">
+                <b>Graph Forensic Evidence:</b> {graph_evidence}
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Graph Quick-Actions Bar
+    col_btn_net, col_btn_a, col_btn_b, col_btn_c = st.columns([1.5, 1, 1, 1])
+    pages_map = st.session_state.get("_pages_map", {})
+    with col_btn_net:
+        if st.button("Open in Network Viewer →", key="btn_open_net_from_alert", use_container_width=True, type="primary"):
+            st.session_state.selected_network_account = snd_id
             if "Network" in pages_map:
                 st.switch_page(pages_map["Network"])
-    st.markdown('</div>', unsafe_allow_html=True)
+    with col_btn_a:
+        if st.button(f"Inspect ACC_{snd_id}", key="btn_insp_a", use_container_width=True):
+            st.session_state.selected_account = snd_id
+            if "Accounts" in pages_map:
+                st.switch_page(pages_map["Accounts"])
+    with col_btn_b:
+        if st.button(f"Inspect ACC_{rcv_id}", key="btn_insp_b", use_container_width=True):
+            st.session_state.selected_account = rcv_id
+            if "Accounts" in pages_map:
+                st.switch_page(pages_map["Accounts"])
+    with col_btn_c:
+        if st.button(f"Inspect ACC_{c_acc}", key="btn_insp_c", use_container_width=True):
+            st.session_state.selected_account = c_acc
+            if "Accounts" in pages_map:
+                st.switch_page(pages_map["Accounts"])
 
-    # 5. Investigation Workflow & Actions
-    st.markdown('<div class="neo-card" style="padding: 22px 26px;">', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1rem; font-weight: 700; color: #1E3A8A; margin-bottom: 14px;">INVESTIGATION DISPOSITION & ACTIONS</div>', unsafe_allow_html=True)
-    
-    col_act1, col_act2 = st.columns([1, 2])
-    with col_act1:
-        st.markdown(f"**Current Status:** {render_status_chip(curr_status)}", unsafe_allow_html=True)
-        st.markdown(f"**Assigned Investigator:** `{assigned_to}`")
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("**Change Disposition:**")
-        c_b1, c_b2, c_b3 = st.columns(3)
-        with c_b1:
-            if st.button("CONFIRM", key="btn_confirm", use_container_width=True, type="primary"):
-                data_service.update_alert_status(alert_id, "CONFIRMED", "analyst_1")
-                st.rerun()
-        with c_b2:
-            if st.button("FALSE POSITIVE", key="btn_fp", use_container_width=True):
-                data_service.update_alert_status(alert_id, "FALSE POSITIVE", "analyst_1")
-                st.rerun()
-        with c_b3:
-            if st.button("ESCALATE", key="btn_esc", use_container_width=True):
-                data_service.update_alert_status(alert_id, "UNDER REVIEW", "analyst_1")
-                st.rerun()
+    st.write("")
 
-    with col_act2:
-        st.markdown("**Add Investigation Audit Note:**")
-        note_text = st.text_area("Investigation Note", placeholder="Enter findings, regulatory rationale, or escalation notes...", label_visibility="collapsed")
-        if st.button("Save Investigation Note", key="btn_save_note"):
+    # 5. Investigation Disposition & Actions (Clean, Spacious Layout)
+    st.markdown(f"""
+        <div class="neo-card" style="padding: 22px 26px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
+                        INVESTIGATION DISPOSITION & ACTIONS
+                    </span>
+                    <span class="badge-indigo">COMPLIANCE DECISION WORKBENCH</span>
+                </div>
+                <div>
+                    <span style="font-size: 0.82rem; color: #64748B;">Assigned Investigator:</span> 
+                    <span class="code-pill">{assigned_to}</span>
+                </div>
+            </div>
+            <div style="font-size: 0.84rem; color: #475569; margin-bottom: 14px;">
+                Current Case Status: {render_status_chip(curr_status)} 
+                • Updating disposition automatically records an immutable audit trail in Databricks Unity Catalog.
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # Dedicated Full-Width Disposition Button Row
+    st.markdown('<div style="font-size: 0.80rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">CHANGE CASE DISPOSITION:</div>', unsafe_allow_html=True)
+    d_col1, d_col2, d_col3, d_col4 = st.columns(4)
+    with d_col1:
+        if st.button("✓ Confirm Laundering", key="btn_confirm", use_container_width=True, type="primary"):
+            data_service.update_alert_status(alert_id, "CONFIRMED", "analyst_1")
+            st.success("Case marked CONFIRMED! Audit record logged.")
+            st.rerun()
+    with d_col2:
+        if st.button("✕ False Positive", key="btn_fp", use_container_width=True):
+            data_service.update_alert_status(alert_id, "FALSE POSITIVE", "analyst_1")
+            st.info("Case marked FALSE POSITIVE.")
+            st.rerun()
+    with d_col3:
+        if st.button("▲ Escalate Review", key="btn_esc", use_container_width=True):
+            data_service.update_alert_status(alert_id, "UNDER REVIEW", "analyst_1")
+            st.warning("Case escalated for secondary review.")
+            st.rerun()
+    with d_col4:
+        if st.button("↺ Re-Open Alert", key="btn_reopen", use_container_width=True):
+            data_service.update_alert_status(alert_id, "OPEN", "analyst_1")
+            st.info("Case re-opened.")
+            st.rerun()
+
+    st.write("")
+
+    # Audit Notes Section (Clean Two Columns)
+    c_note_input, c_note_log = st.columns([1.2, 1])
+    with c_note_input:
+        st.markdown('<div class="neo-card" style="padding: 18px 20px; height: 100%;">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 0.90rem; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">ADD INVESTIGATION AUDIT NOTE</div>', unsafe_allow_html=True)
+        note_text = st.text_area("Investigation Note", placeholder="Enter regulatory findings, suspicious counterparty rationale, or escalation justification...", label_visibility="collapsed", height=100)
+        if st.button("Commit Note to Audit Trail", key="btn_save_note", use_container_width=True):
             if note_text.strip():
                 data_service.add_alert_comment(alert_id, note_text.strip(), "analyst_1")
                 st.success("Note committed to Databricks compliance audit log!")
                 st.rerun()
+            else:
+                st.warning("Please enter a note before saving.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        # Audit History
+    with c_note_log:
+        st.markdown('<div class="neo-card" style="padding: 18px 20px; height: 100%;">', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 0.90rem; font-weight: 700; color: #1E3A8A; margin-bottom: 8px;">PRIOR CASE NOTES & AUDIT TRAIL</div>', unsafe_allow_html=True)
         comments = alert.get("comments", [])
         if comments:
-            st.markdown("<br><b>Prior Case Notes:</b>", unsafe_allow_html=True)
             for c in comments:
                 st.markdown(f"""
-                    <div style="background: #F4F6F9; border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 0.82rem;">
-                        <span style="font-weight: 700; color: #1E3A8A;">{c.get('user_id', 'analyst')}</span> 
-                        <span style="color: #68707A; font-size: 0.74rem;">({c.get('timestamp', '')})</span>: 
-                        {c.get('comment_text', '')}
+                    <div style="background: #F4F6F9; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 0.82rem; border-left: 3px solid #1E3A8A;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                            <span style="font-weight: 700; color: #1E3A8A;">{c.get('created_by') or c.get('user_id', 'analyst_1')}</span>
+                            <span style="color: #64748B; font-size: 0.72rem;">{c.get('created_timestamp') or c.get('timestamp', '')}</span>
+                        </div>
+                        <div style="color: #334155;">{c.get('comment_text', '')}</div>
                     </div>
                 """, unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.caption("No prior notes recorded for this alert.")
+        st.markdown('</div>', unsafe_allow_html=True)

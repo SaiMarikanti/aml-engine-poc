@@ -460,3 +460,185 @@ div[data-testid="stSidebar"] div.stButton > button:focus:not(:focus-visible) {
   overflow-x: auto;
   border-radius: 10px;
 }
+
+/* ------------------------------------------------------------- */
+/* RICH COLORFUL NEUMORPHIC PALETTE (BEYOND SKY BLUE)           */
+/* ------------------------------------------------------------- */
+.badge-violet {
+  background: #EDE9FE !important;
+  color: #6D28D9 !important;
+  border: 1px solid #DDD6FE !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+.badge-teal {
+  background: #CFFAFE !important;
+  color: #0E7490 !important;
+  border: 1px solid #A5F3FC !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+.badge-amber {
+  background: #FEF3C7 !important;
+  color: #B45309 !important;
+  border: 1px solid #FDE68A !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+.badge-indigo {
+  background: #E0E7FF !important;
+  color: #3730A3 !important;
+  border: 1px solid #C7D2FE !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+.badge-emerald {
+  background: #D1FAE5 !important;
+  color: #065F46 !important;
+  border: 1px solid #A7F3D0 !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+.badge-rose {
+  background: #FEE2E2 !important;
+  color: #991B1B !important;
+  border: 1px solid #FECACA !important;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 2px 2px 4px rgba(188, 196, 208, 0.4), -2px -2px 4px #FFFFFF;
+}
+
+/* ------------------------------------------------------------- */
+/* NEUMORPHIC 2X2 CONFUSION MATRIX QUADRANT SYSTEM               */
+/* ------------------------------------------------------------- */
+.neo-matrix-container {
+  background: #E2E8F0;
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow: inset 3px 3px 7px #CAD2DC, inset -3px -3px 7px #FFFFFF;
+}
+
+.neo-matrix-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.neo-matrix-cell {
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 105px;
+}
+
+.matrix-tn {
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  border: 1px solid #A7F3D0;
+  box-shadow: 3px 3px 6px #CAD2DC, -3px -3px 6px #FFFFFF;
+}
+
+.matrix-fp {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  border: 1px solid #FDE68A;
+  box-shadow: 3px 3px 6px #CAD2DC, -3px -3px 6px #FFFFFF;
+}
+
+.matrix-fn {
+  background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+  border: 1px solid #FECACA;
+  box-shadow: 3px 3px 6px #CAD2DC, -3px -3px 6px #FFFFFF;
+}
+
+.matrix-tp {
+  background: linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 100%);
+  border: 1px solid #DDD6FE;
+  box-shadow: 3px 3px 6px #CAD2DC, -3px -3px 6px #FFFFFF;
+}
+
+.matrix-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.matrix-lbl {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.matrix-sub {
+  font-size: 0.70rem;
+  color: #64748B;
+  margin-top: 3px;
+}
+
+/* ------------------------------------------------------------- */
+/* PREVENT AWKWARD BUTTON TEXT WRAPPING ACROSS ALL VIEWS         */
+/* ------------------------------------------------------------- */
+div.stButton > button {
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+/* ------------------------------------------------------------- */
+/* GRAPH TOPOLOGY MOTIF POD                                      */
+/* ------------------------------------------------------------- */
+.neo-graph-motif {
+  background: #E5EBF2;
+  border-radius: 14px;
+  box-shadow: inset 3px 3px 6px #CAD2DC, inset -3px -3px 6px #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  padding: 16px 20px;
+  margin-top: 8px;
+}
