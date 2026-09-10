@@ -128,7 +128,7 @@ class DatabricksRepository(RepositoryBase):
                     entity_id STRING,
                     old_value STRING,
                     new_value STRING,
-                    timestamp STRING
+                    event_timestamp STRING
                 )
                 """
             )
@@ -187,20 +187,23 @@ class DatabricksRepository(RepositoryBase):
         total_alerts = int(df_al.iloc[0]["total_alerts"]) if not df_al.empty else 0
         suspicious_vol = float(df_al.iloc[0]["suspicious_volume"]) if not df_al.empty else 0.0
 
-        # 3. High risk alerts (is_fraud = 1 or rule score >= 50 from Rule Engine)
+        # 3. High risk alerts (is_fraud = true or rule score >= 50 from Rule Engine)
         try:
             df_hr = self.client.execute_query(
                 f"""
                 SELECT count(distinct a.alert_id) as high_risk 
                 FROM {alert_table} a
                 LEFT JOIN {self._qualify_data(TABLE_RULE_SCORES)} r ON a.tx_id = r.tx_id
-                WHERE a.is_fraud = 1 OR coalesce(r.rule_score, 0) >= 50
+                WHERE a.is_fraud = true OR coalesce(r.rule_score, 0) >= 50
                 """
             )
             high_risk_alerts = int(df_hr.iloc[0]["high_risk"]) if not df_hr.empty else 0
         except Exception:
-            df_hr = self.client.execute_query(f"SELECT count(*) as high_risk FROM {alert_table} WHERE is_fraud = 1")
-            high_risk_alerts = int(df_hr.iloc[0]["high_risk"]) if not df_hr.empty else 0
+            try:
+                df_hr = self.client.execute_query(f"SELECT count(*) as high_risk FROM {alert_table} WHERE is_fraud = true")
+                high_risk_alerts = int(df_hr.iloc[0]["high_risk"]) if not df_hr.empty else 0
+            except Exception:
+                high_risk_alerts = 0
 
         # 4. Open cases: count open alert statuses from APP_SCHEMA if tracked; otherwise default to total_alerts
         open_cases = total_alerts
@@ -227,12 +230,12 @@ class DatabricksRepository(RepositoryBase):
         alert_table = self._qualify_data(TABLE_ALERTS)
         sql = f"""
             SELECT 
-                to_date(event_time) as time_step, 
+                cast(event_time as string) as time_step, 
                 count(*) as alert_count, 
                 sum(tx_amount) as total_amount
             FROM {alert_table}
-            GROUP BY to_date(event_time)
-            ORDER BY time_step ASC
+            GROUP BY cast(event_time as string)
+            ORDER BY coalesce(try_cast(cast(event_time as string) as int), 0) ASC, cast(event_time as string) ASC
             LIMIT 30
         """
         try:
@@ -251,7 +254,7 @@ class DatabricksRepository(RepositoryBase):
         sql = f"""
             SELECT 
                 CASE 
-                    WHEN a.is_fraud = 1 OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL'
+                    WHEN a.is_fraud = true OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL'
                     WHEN coalesce(r.rule_score, 0) >= 50 THEN 'HIGH'
                     WHEN coalesce(r.rule_score, 0) >= 25 THEN 'MEDIUM'
                     ELSE 'LOW'
@@ -286,13 +289,13 @@ class DatabricksRepository(RepositoryBase):
                 coalesce(g.total_degree, 0) as SUSPICIOUS_CONNECTIONS,
                 coalesce(al.max_rule_score, 0) as RULE_SCORE,
                 (CASE 
-                    WHEN a.is_fraud = 1 THEN 1.0
+                    WHEN a.is_fraud = true THEN 1.0
                     WHEN coalesce(al.max_rule_score, 0) > 0 THEN round(least(al.max_rule_score / 100.0, 1.0), 2)
                     WHEN coalesce(g.total_degree, 0) > 0 THEN round(least(g.total_degree / 20.0, 0.9), 2)
                     ELSE 0.1
                 END) as RISK_SCORE,
                 (CASE 
-                    WHEN a.is_fraud = 1 OR coalesce(al.max_rule_score, 0) >= 75 THEN 'CRITICAL'
+                    WHEN a.is_fraud = true OR coalesce(al.max_rule_score, 0) >= 75 THEN 'CRITICAL'
                     WHEN coalesce(al.max_rule_score, 0) >= 50 OR coalesce(g.total_degree, 0) > 10 THEN 'HIGH'
                     WHEN coalesce(al.max_rule_score, 0) >= 25 OR coalesce(g.total_degree, 0) > 5 THEN 'MEDIUM'
                     ELSE 'LOW'
@@ -308,7 +311,7 @@ class DatabricksRepository(RepositoryBase):
                 LEFT JOIN {self._qualify_data(TABLE_RULE_SCORES)} r ON alt.tx_id = r.tx_id
                 GROUP BY alt.sender_account_id
             ) al ON a.account_id = al.account_id
-            ORDER BY a.is_fraud DESC, coalesce(al.max_rule_score, 0) DESC, coalesce(g.total_degree, 0) DESC
+            ORDER BY (CASE WHEN a.is_fraud = true THEN 1 ELSE 0 END) DESC, coalesce(al.max_rule_score, 0) DESC, coalesce(g.total_degree, 0) DESC
             LIMIT {limit}
         """
         try:
@@ -349,7 +352,7 @@ class DatabricksRepository(RepositoryBase):
         if max_amount is not None and max_amount > 0:
             conditions.append(f"tx_amount <= {max_amount}")
         if is_fraud_only:
-            conditions.append("is_fraud = 1")
+            conditions.append("is_fraud = true")
 
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -431,7 +434,7 @@ class DatabricksRepository(RepositoryBase):
             graph_label = "Normal Topology"
 
         # Calculate composite scores from actual detections
-        ml_prob = 0.92 if row.get("IS_FRAUD") == 1 else (0.75 if rule_score_total >= 50 else 0.15)
+        ml_prob = 0.92 if bool(row.get("IS_FRAUD")) else (0.75 if rule_score_total >= 50 else 0.15)
         normalized_rule_score = min(1.0, rule_score_total / 100.0)
         risk_score = round(0.40 * normalized_rule_score + 0.60 * ml_prob, 2)
 
@@ -475,12 +478,12 @@ class DatabricksRepository(RepositoryBase):
                 coalesce(r.rule_score, 0) as RULE_SCORE,
                 r.triggered_rules as TRIGGERED_RULES,
                 (CASE 
-                    WHEN a.is_fraud = 1 THEN 1.0 
+                    WHEN a.is_fraud = true THEN 1.0 
                     WHEN coalesce(r.rule_score, 0) > 0 THEN round(least(r.rule_score / 100.0, 1.0), 2) 
                     ELSE 0.30 
                 END) as RISK_SCORE,
                 (CASE 
-                    WHEN a.is_fraud = 1 OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL' 
+                    WHEN a.is_fraud = true OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL' 
                     WHEN coalesce(r.rule_score, 0) >= 50 THEN 'HIGH' 
                     WHEN coalesce(r.rule_score, 0) >= 25 THEN 'MEDIUM' 
                     ELSE 'LOW' 
@@ -540,12 +543,12 @@ class DatabricksRepository(RepositoryBase):
                 coalesce(r.rule_score, 0) as RULE_SCORE,
                 r.triggered_rules as TRIGGERED_RULES,
                 (CASE 
-                    WHEN a.is_fraud = 1 THEN 1.0 
+                    WHEN a.is_fraud = true THEN 1.0 
                     WHEN coalesce(r.rule_score, 0) > 0 THEN round(least(r.rule_score / 100.0, 1.0), 2) 
                     ELSE 0.30 
                 END) as RISK_SCORE,
                 (CASE 
-                    WHEN a.is_fraud = 1 OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL' 
+                    WHEN a.is_fraud = true OR coalesce(r.rule_score, 0) >= 75 THEN 'CRITICAL' 
                     WHEN coalesce(r.rule_score, 0) >= 50 THEN 'HIGH' 
                     WHEN coalesce(r.rule_score, 0) >= 25 THEN 'MEDIUM' 
                     ELSE 'LOW' 
@@ -612,14 +615,48 @@ class DatabricksRepository(RepositoryBase):
     def _get_alert_audit(self, alert_id: int) -> List[Dict[str, Any]]:
         if self._persistence_mode == "databricks":
             try:
-                df = self.client.execute_query(
-                    f"SELECT audit_id, user_id, action, entity_type, entity_id, old_value, new_value, timestamp FROM {self._qualify_app(TABLE_AUDIT_LOG)} WHERE entity_id = '{alert_id}' ORDER BY timestamp DESC"
-                )
-                if not df.empty:
-                    return df.to_dict(orient="records")
+                try:
+                    df = self.client.execute_query(
+                        f"SELECT * FROM {self._qualify_app(TABLE_AUDIT_LOG)} WHERE entity_id = '{alert_id}' ORDER BY event_timestamp DESC"
+                    )
+                    if not df.empty:
+                        if "event_timestamp" in df.columns and "timestamp" not in df.columns:
+                            df["timestamp"] = df["event_timestamp"]
+                        return df.to_dict(orient="records")
+                except Exception:
+                    df = self.client.execute_query(
+                        f"SELECT * FROM {self._qualify_app(TABLE_AUDIT_LOG)} WHERE entity_id = '{alert_id}' ORDER BY timestamp DESC"
+                    )
+                    if not df.empty:
+                        return df.to_dict(orient="records")
             except Exception:
                 pass
         return [a for a in self._session_audit_log if str(a.get("entity_id")) == str(alert_id)]
+
+    def _persist_audit_log(self, user_id: str, action: str, entity_id: str, old_value: Optional[str], new_value: Optional[str], now: str):
+        """Persist an audit record to Databricks Unity Catalog, handling event_timestamp or timestamp schema."""
+        if self._persistence_mode != "databricks":
+            return
+        audit_id = int(datetime.now().timestamp())
+        old_val_sql = f"'{old_value}'" if old_value is not None else "NULL"
+        new_val_sql = f"'{new_value}'" if new_value is not None else "NULL"
+        try:
+            self.client.execute_statement(
+                f"""
+                INSERT INTO {self._qualify_app(TABLE_AUDIT_LOG)} (audit_id, user_id, action, entity_type, entity_id, old_value, new_value, event_timestamp)
+                VALUES ({audit_id}, '{user_id}', '{action}', 'ALERT', '{entity_id}', {old_val_sql}, {new_val_sql}, '{now}')
+                """
+            )
+        except Exception:
+            try:
+                self.client.execute_statement(
+                    f"""
+                    INSERT INTO {self._qualify_app(TABLE_AUDIT_LOG)} (audit_id, user_id, action, entity_type, entity_id, old_value, new_value, timestamp)
+                    VALUES ({audit_id}, '{user_id}', '{action}', 'ALERT', '{entity_id}', {old_val_sql}, {new_val_sql}, '{now}')
+                    """
+                )
+            except Exception as e:
+                logger.warning(f"Could not persist audit entry to Databricks: {e}")
 
     def update_alert_status(self, alert_id: int, new_status: str, user_id: str) -> bool:
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -634,14 +671,9 @@ class DatabricksRepository(RepositoryBase):
                     VALUES ({alert_id}, '{new_status}', '{user_id}', '{user_id}', '{now}')
                     """
                 )
-                self.client.execute_statement(
-                    f"""
-                    INSERT INTO {self._qualify_app(TABLE_AUDIT_LOG)} (audit_id, user_id, action, entity_type, entity_id, old_value, new_value, timestamp)
-                    VALUES ({int(datetime.now().timestamp())}, '{user_id}', 'UPDATE_STATUS', 'ALERT', '{alert_id}', '{old_status}', '{new_status}', '{now}')
-                    """
-                )
             except Exception as e:
                 logger.warning(f"Could not persist alert status to Databricks: {e}")
+            self._persist_audit_log(user_id, "UPDATE_STATUS", str(alert_id), old_status, new_status, now)
 
         # 2. Update session cache
         self._session_alert_status[alert_id] = {
@@ -674,14 +706,9 @@ class DatabricksRepository(RepositoryBase):
                     VALUES ({alert_id}, '{curr_status}', '{assigned_to}', '{user_id}', '{now}')
                     """
                 )
-                self.client.execute_statement(
-                    f"""
-                    INSERT INTO {self._qualify_app(TABLE_AUDIT_LOG)} (audit_id, user_id, action, entity_type, entity_id, old_value, new_value, timestamp)
-                    VALUES ({int(datetime.now().timestamp())}, '{user_id}', 'ASSIGN', 'ALERT', '{alert_id}', 'Unassigned', '{assigned_to}', '{now}')
-                    """
-                )
             except Exception as e:
                 logger.warning(f"Could not persist alert assignment to Databricks: {e}")
+            self._persist_audit_log(user_id, "ASSIGN", str(alert_id), "Unassigned", assigned_to, now)
 
         curr["assigned_to"] = assigned_to
         curr["updated_by"] = user_id
@@ -712,14 +739,9 @@ class DatabricksRepository(RepositoryBase):
                     VALUES ({c_id}, {alert_id}, '{user_id}', '{clean_text}', '{now}')
                     """
                 )
-                self.client.execute_statement(
-                    f"""
-                    INSERT INTO {self._qualify_app(TABLE_AUDIT_LOG)} (audit_id, user_id, action, entity_type, entity_id, old_value, new_value, timestamp)
-                    VALUES ({c_id + 1}, '{user_id}', 'ADD_COMMENT', 'ALERT', '{alert_id}', NULL, '{clean_text[:40]}', '{now}')
-                    """
-                )
             except Exception as e:
                 logger.warning(f"Could not persist comment to Databricks: {e}")
+            self._persist_audit_log(user_id, "ADD_COMMENT", str(alert_id), None, clean_text[:40], now)
 
         self._session_comments.append({
             "id": len(self._session_comments) + 1,
@@ -822,7 +844,7 @@ class DatabricksRepository(RepositoryBase):
         acc["RULE_SCORE"] = max_rule
 
         # Derive risk metrics directly from pipeline outputs (Fraud tag, Rule Engine score, GraphFrames degree)
-        if acc.get("IS_FRAUD") == 1:
+        if bool(acc.get("IS_FRAUD")):
             acc["RISK_SCORE"] = 1.0
             acc["RISK_LEVEL"] = "CRITICAL"
         elif max_rule >= 75:
@@ -839,7 +861,7 @@ class DatabricksRepository(RepositoryBase):
             acc["RISK_LEVEL"] = "LOW"
 
         factors = []
-        if acc.get("IS_FRAUD") == 1:
+        if bool(acc.get("IS_FRAUD")):
             factors.append("Confirmed fraud participant tag in Silver Accounts")
         if max_rule > 0:
             factors.append(f"Rule Engine score: {max_rule:.1f}")
@@ -934,7 +956,7 @@ class DatabricksRepository(RepositoryBase):
         nodes = []
         for a_id in acc_ids:
             props = node_map.get(a_id, {})
-            is_fraud = props.get("is_fraud", 0) == 1
+            is_fraud = bool(props.get("is_fraud"))
             tot_deg = props.get("total_degree", 0)
             score = 0.95 if is_fraud else (0.80 if tot_deg > 10 else 0.30)
             level = "CRITICAL" if score >= 0.85 else ("HIGH" if score >= 0.70 else "LOW")
@@ -1042,12 +1064,20 @@ class DatabricksRepository(RepositoryBase):
         if self._persistence_mode == "databricks":
             try:
                 where_clause = f"WHERE user_id = '{user_filter}'" if user_filter else ""
-                sql = f"SELECT * FROM {self._qualify_app(TABLE_AUDIT_LOG)} {where_clause} ORDER BY timestamp DESC LIMIT {limit}"
-                df = self.client.execute_query(sql)
-                if not df.empty:
-                    return df
-            except Exception:
-                pass
+                try:
+                    sql = f"SELECT * FROM {self._qualify_app(TABLE_AUDIT_LOG)} {where_clause} ORDER BY event_timestamp DESC LIMIT {limit}"
+                    df = self.client.execute_query(sql)
+                    if not df.empty:
+                        if "event_timestamp" in df.columns and "timestamp" not in df.columns:
+                            df["timestamp"] = df["event_timestamp"]
+                        return df
+                except Exception:
+                    sql = f"SELECT * FROM {self._qualify_app(TABLE_AUDIT_LOG)} {where_clause} ORDER BY timestamp DESC LIMIT {limit}"
+                    df = self.client.execute_query(sql)
+                    if not df.empty:
+                        return df
+            except Exception as e:
+                logger.warning(f"Error querying audit trail: {e}")
         df = pd.DataFrame(self._session_audit_log)
         if user_filter and not df.empty:
             df = df[df["user_id"] == user_filter]
