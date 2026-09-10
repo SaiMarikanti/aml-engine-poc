@@ -541,17 +541,24 @@ class DatabricksRepository(RepositoryBase):
             if not df.empty and "ALERT_ID" in df.columns:
                 df = df.drop_duplicates(subset=["ALERT_ID"]).head(limit).reset_index(drop=True)
 
+            if not df.empty:
+                for col in ["STATUS", "ASSIGNED_TO", "UPDATED_TIMESTAMP"]:
+                    if col in df.columns:
+                        df[col] = df[col].astype(object)
+                    else:
+                        df[col] = None
+
             # Overlay persistent status and assignments from Databricks or session
             for idx, row in df.iterrows():
                 a_id = int(row.get("ALERT_ID", 0))
                 persisted = self._get_persisted_status(a_id)
                 if persisted:
                     if "status" in persisted:
-                        df.at[idx, "STATUS"] = persisted["status"]
+                        df.at[idx, "STATUS"] = str(persisted["status"])
                     if "assigned_to" in persisted:
-                        df.at[idx, "ASSIGNED_TO"] = persisted["assigned_to"]
+                        df.at[idx, "ASSIGNED_TO"] = str(persisted["assigned_to"])
                     if "updated_timestamp" in persisted:
-                        df.at[idx, "UPDATED_TIMESTAMP"] = persisted["updated_timestamp"]
+                        df.at[idx, "UPDATED_TIMESTAMP"] = str(persisted["updated_timestamp"])
 
             # Filter in-memory if needed
             if status and status != "ALL":

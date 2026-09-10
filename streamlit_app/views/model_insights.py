@@ -2,6 +2,7 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
+import textwrap
 try:
     from services.data_service import data_service
     from components.kpi_card import render_kpi_card
@@ -125,7 +126,7 @@ def render_model_insights():
         return "#4F46E5"
 
     with col_feat:
-        st.markdown("""
+        feat_header_html = textwrap.dedent("""
             <div class="neo-card" style="padding: 22px 24px; height: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
@@ -136,7 +137,8 @@ def render_model_insights():
                 <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 12px;">
                     Relative information gain per engineered feature from <code>ml_training_data</code>.
                 </div>
-        """, unsafe_allow_html=True)
+        """).strip()
+        st.markdown(feat_header_html, unsafe_allow_html=True)
         
         df_feat = pd.DataFrame(insights["feature_importance"])
         df_feat = df_feat.sort_values(by="importance", ascending=True)
@@ -173,7 +175,7 @@ def render_model_insights():
         st.plotly_chart(fig_feat, use_container_width=True, config={'displayModeBar': False})
         
         # Color Category Legend
-        st.markdown("""
+        feat_legend_html = textwrap.dedent("""
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 0.74rem;">
                 <span style="display: inline-flex; align-items: center; gap: 4px; color: #1E40AF; font-weight: 600;">
                     <span style="width: 9px; height: 9px; border-radius: 50%; background: #2563EB;"></span> Value & Flags (30%)
@@ -189,7 +191,8 @@ def render_model_insights():
                 </span>
             </div>
             </div>
-        """, unsafe_allow_html=True)
+        """).strip()
+        st.markdown(feat_legend_html, unsafe_allow_html=True)
 
     with col_matrix:
         cm = insights["confusion_matrix"]
@@ -198,7 +201,7 @@ def render_model_insights():
         fn = cm["false_negative"]
         tp = cm["true_positive"]
         
-        st.markdown(f"""
+        cm_html = textwrap.dedent(f"""
             <div class="neo-card" style="padding: 22px 24px; height: 100%;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                     <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
@@ -209,16 +212,11 @@ def render_model_insights():
                 <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 12px;">
                     Holdout evaluation: <b>{tp:,} caught fraud</b> vs <b>{fp:,} false alarms</b>.
                 </div>
-                
-                <!-- Axis Headers -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 6px; text-align: center;">
                     <div style="font-size: 0.72rem; font-weight: 800; color: #475569; letter-spacing: 0.06em;">PRED: LEGITIMATE</div>
                     <div style="font-size: 0.72rem; font-weight: 800; color: #475569; letter-spacing: 0.06em;">PRED: LAUNDERING</div>
                 </div>
-
-                <!-- 2x2 Neumorphic Quad Matrix -->
                 <div class="neo-matrix-grid">
-                    <!-- Top-Left: True Negative -->
                     <div class="neo-matrix-cell matrix-tn">
                         <div>
                             <div class="matrix-val" style="color: #065F46;">{tn:,}</div>
@@ -226,8 +224,6 @@ def render_model_insights():
                         </div>
                         <div class="matrix-sub">Legitimate cleared (99.1%)</div>
                     </div>
-
-                    <!-- Top-Right: False Positive -->
                     <div class="neo-matrix-cell matrix-fp">
                         <div>
                             <div class="matrix-val" style="color: #92400E;">{fp:,}</div>
@@ -235,8 +231,6 @@ def render_model_insights():
                         </div>
                         <div class="matrix-sub">Investigated & cleared (0.9%)</div>
                     </div>
-
-                    <!-- Bottom-Left: False Negative -->
                     <div class="neo-matrix-cell matrix-fn">
                         <div>
                             <div class="matrix-val" style="color: #991B1B;">{fn:,}</div>
@@ -244,8 +238,6 @@ def render_model_insights():
                         </div>
                         <div class="matrix-sub">Stealth evasion (9.1%)</div>
                     </div>
-
-                    <!-- Bottom-Right: True Positive -->
                     <div class="neo-matrix-cell matrix-tp">
                         <div>
                             <div class="matrix-val" style="color: #4C1D95;">{tp:,}</div>
@@ -254,8 +246,6 @@ def render_model_insights():
                         <div class="matrix-sub">Laundering detected (90.9%)</div>
                     </div>
                 </div>
-
-                <!-- Diagnostic KPI Footer -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding-top: 10px; border-top: 1px solid #E2E8F0; font-size: 0.75rem;">
                     <span style="color: #065F46; font-weight: 700;">Specificity: 99.1%</span>
                     <span style="color: #6D28D9; font-weight: 700;">Recall: 90.9%</span>
@@ -263,4 +253,5 @@ def render_model_insights():
                     <span style="color: #475569; font-weight: 700;">Threshold: 0.98</span>
                 </div>
             </div>
-        """, unsafe_allow_html=True)
+        """).strip()
+        st.markdown(cm_html, unsafe_allow_html=True)

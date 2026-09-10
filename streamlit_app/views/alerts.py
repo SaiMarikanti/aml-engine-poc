@@ -1,6 +1,7 @@
 """Alert Center & Deep Investigation Workbench."""
 import streamlit as st
 import pandas as pd
+import textwrap
 from datetime import datetime
 
 try:
@@ -182,11 +183,9 @@ def render_alert_investigation(alert_id: int):
     """, unsafe_allow_html=True)
 
     # 2. Transaction Summary Row (Self-Contained Card)
-    st.markdown(f"""
+    tx_summary_html = textwrap.dedent(f"""
         <div class="neo-card" style="padding: 20px 24px;">
-            <div style="font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin-bottom: 14px; letter-spacing: 0.02em;">
-                FLAGGED TRANSACTION SUMMARY
-            </div>
+            <div style="font-size: 0.95rem; font-weight: 800; color: #1E3A8A; margin-bottom: 14px; letter-spacing: 0.02em;">FLAGGED TRANSACTION SUMMARY</div>
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
                 <div>
                     <div style="font-size: 0.74rem; font-weight: 700; color: #64748B; text-transform: uppercase;">TRANSACTION ID</div>
@@ -206,61 +205,48 @@ def render_alert_investigation(alert_id: int):
                 </div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """).strip()
+    st.markdown(tx_summary_html, unsafe_allow_html=True)
 
     # 3. Multivariate Detection Evidence (Self-Contained Card)
     atype = str(alert.get("ALERT_TYPE", "")).lower()
     is_graph_motif = 'graph' in atype or 'cycle' in atype or 'fan' in atype
     
-    st.markdown(f"""
+    evidence_html = textwrap.dedent(f"""
         <div class="neo-card" style="padding: 22px 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
-                    MULTIVARIATE DETECTION EVIDENCE
-                </div>
+                <div style="font-size: 0.98rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">MULTIVARIATE DETECTION EVIDENCE</div>
                 <span class="badge-indigo">3-TIER VALIDATION</span>
             </div>
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
-                <!-- Rule Engine -->
                 <div class="evidence-card triggered" style="margin-bottom: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.76rem; font-weight: 800; color: #DC2626; text-transform: uppercase;">⚡ RULE ENGINE</span>
                         <span class="badge-rose" style="font-size: 0.68rem; padding: 2px 7px;">TRIGGERED</span>
                     </div>
                     <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">Threshold Exceeded</div>
-                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
-                        Deterministic limit breached: High-velocity transfer pattern detected in surveillance window.
-                    </div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">Deterministic limit breached: High-velocity transfer pattern detected in surveillance window.</div>
                 </div>
-
-                <!-- Graph Topology -->
                 <div class="evidence-card {'triggered' if is_graph_motif else ''}" style="margin-bottom: 0; {'border-left: 4px solid #7C3AED !important;' if is_graph_motif else ''}">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.76rem; font-weight: 800; color: {'#7C3AED' if is_graph_motif else '#1E3A8A'}; text-transform: uppercase;">🕸 GRAPH TOPOLOGY</span>
-                        <span class="{'badge-violet' if is_graph_motif else 'badge-indigo'}" style="font-size: 0.68rem; padding: 2px 7px;">
-                            {'TRIGGERED' if is_graph_motif else 'NORMAL'}
-                        </span>
+                        <span class="{'badge-violet' if is_graph_motif else 'badge-indigo'}" style="font-size: 0.68rem; padding: 2px 7px;">{'TRIGGERED' if is_graph_motif else 'NORMAL'}</span>
                     </div>
                     <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">Motif: {alert.get('ALERT_TYPE', 'Transfer').upper()}</div>
-                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
-                        GraphFrames precomputed cycle or hub cluster recorded in Databricks <code>graph_results</code>.
-                    </div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">GraphFrames precomputed cycle or hub cluster recorded in Databricks <code>graph_results</code>.</div>
                 </div>
-
-                <!-- ML Model (XGBoost) -->
                 <div class="evidence-card triggered" style="margin-bottom: 0;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 0.76rem; font-weight: 800; color: #DC2626; text-transform: uppercase;">🤖 ML MODEL (XGBOOST)</span>
                         <span class="badge-rose" style="font-size: 0.68rem; padding: 2px 7px;">{score:.2f} RISK</span>
                     </div>
                     <div style="font-size: 1.05rem; font-weight: 800; color: #0F172A; margin: 6px 0 3px 0;">High ML Suspicion</div>
-                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">
-                        Supervised XGBoost risk score exceeds conservative holdout threshold of 0.98.
-                    </div>
+                    <div style="font-size: 0.80rem; color: #64748B; line-height: 1.4;">Supervised XGBoost risk score exceeds conservative holdout threshold of 0.98.</div>
                 </div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """).strip()
+    st.markdown(evidence_html, unsafe_allow_html=True)
 
     # 4. Counterparty Graph Topology Utilizing graph_results
     gr = alert.get("graph_results") or {}
@@ -273,22 +259,16 @@ def render_alert_investigation(alert_id: int):
     graph_evidence = gr.get("graph_evidence", f"Circular transaction sequence: ACC_{snd_id} ──► ACC_{rcv_id} ──► ACC_{c_acc} ──► ACC_{snd_id}")
     rule_name = gr.get("rule_name", "CYCLE_DETECTION")
 
-    st.markdown(f"""
+    topology_html = textwrap.dedent(f"""
         <div class="neo-card" style="padding: 22px 26px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
-                        COUNTERPARTY GRAPH TOPOLOGY
-                    </span>
+                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">COUNTERPARTY GRAPH TOPOLOGY</span>
                     <span class="badge-violet">DATABRICKS GRAPHFRAMES</span>
                 </div>
                 <span class="code-pill">CYCLE ID: {cycle_id}</span>
             </div>
-            <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">
-                Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.
-            </div>
-
-            <!-- Visual 3-Hop Circular Topology Diagram -->
+            <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.</div>
             <div class="neo-graph-motif">
                 <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">
                     <div style="text-align: center;">
@@ -321,8 +301,6 @@ def render_alert_investigation(alert_id: int):
                     </div>
                 </div>
             </div>
-
-            <!-- Topological Telemetry Details -->
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 0.82rem;">
                 <div>
                     <span style="color: #64748B;">Graph Rule Name:</span><br>
@@ -341,13 +319,12 @@ def render_alert_investigation(alert_id: int):
                     <span class="badge-violet">CIRCULAR RING</span>
                 </div>
             </div>
-
-            <!-- Evidence Narrative -->
             <div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.82rem; color: #334155;">
                 <b>Graph Forensic Evidence:</b> {graph_evidence}
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """).strip()
+    st.markdown(topology_html, unsafe_allow_html=True)
 
     # Graph Quick-Actions Bar
     col_btn_net, col_btn_a, col_btn_b, col_btn_c = st.columns([1.5, 1, 1, 1])
@@ -376,13 +353,11 @@ def render_alert_investigation(alert_id: int):
     st.write("")
 
     # 5. Investigation Disposition & Actions (Clean, Spacious Layout)
-    st.markdown(f"""
+    disp_hdr_html = textwrap.dedent(f"""
         <div class="neo-card" style="padding: 22px 26px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">
-                        INVESTIGATION DISPOSITION & ACTIONS
-                    </span>
+                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">INVESTIGATION DISPOSITION & ACTIONS</span>
                     <span class="badge-indigo">COMPLIANCE DECISION WORKBENCH</span>
                 </div>
                 <div>
@@ -390,12 +365,13 @@ def render_alert_investigation(alert_id: int):
                     <span class="code-pill">{assigned_to}</span>
                 </div>
             </div>
-            <div style="font-size: 0.84rem; color: #475569; margin-bottom: 14px;">
+            <div style="font-size: 0.84rem; color: #475569;">
                 Current Case Status: {render_status_chip(curr_status)} 
                 • Updating disposition automatically records an immutable audit trail in Databricks Unity Catalog.
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """).strip()
+    st.markdown(disp_hdr_html, unsafe_allow_html=True)
 
     # Dedicated Full-Width Disposition Button Row
     st.markdown('<div style="font-size: 0.80rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;">CHANGE CASE DISPOSITION:</div>', unsafe_allow_html=True)
@@ -444,15 +420,19 @@ def render_alert_investigation(alert_id: int):
         comments = alert.get("comments", [])
         if comments:
             for c in comments:
-                st.markdown(f"""
+                note_user = c.get('created_by') or c.get('user_id', 'analyst_1')
+                note_ts = c.get('created_timestamp') or c.get('timestamp', '')
+                note_body = c.get('comment_text', '')
+                c_html = textwrap.dedent(f"""
                     <div style="background: #F4F6F9; border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; font-size: 0.82rem; border-left: 3px solid #1E3A8A;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                            <span style="font-weight: 700; color: #1E3A8A;">{c.get('created_by') or c.get('user_id', 'analyst_1')}</span>
-                            <span style="color: #64748B; font-size: 0.72rem;">{c.get('created_timestamp') or c.get('timestamp', '')}</span>
+                            <span style="font-weight: 700; color: #1E3A8A;">{note_user}</span>
+                            <span style="color: #64748B; font-size: 0.72rem;">{note_ts}</span>
                         </div>
-                        <div style="color: #334155;">{c.get('comment_text', '')}</div>
+                        <div style="color: #334155;">{note_body}</div>
                     </div>
-                """, unsafe_allow_html=True)
+                """).strip()
+                st.markdown(c_html, unsafe_allow_html=True)
         else:
             st.caption("No prior notes recorded for this alert.")
         st.markdown('</div>', unsafe_allow_html=True)
