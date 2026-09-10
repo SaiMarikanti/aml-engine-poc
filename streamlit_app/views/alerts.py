@@ -137,14 +137,16 @@ def render_alerts():
 
 def render_alert_investigation(alert_id: int):
     """Deep Alert Investigation Workbench."""
-    # Top Return / Navigation bar
-    col_back, col_trail = st.columns([1, 4])
+    # Top Return / Navigation bar (Aligned)
+    col_back, col_trail = st.columns([1.2, 4.8])
     with col_back:
-        if st.button("← Back to Alert Center", key="back_to_alert_center_btn"):
+        if st.button("← Back to Alert Center", key="back_to_alert_center_btn", use_container_width=True):
             st.session_state.selected_alert = None
             st.rerun()
     with col_trail:
+        st.markdown('<div style="padding-top: 8px;">', unsafe_allow_html=True)
         render_breadcrumbs([("Dashboard", "Dashboard"), ("Alert Center", "Alerts"), (f"Alert AL{alert_id}", "")])
+        st.markdown('</div>', unsafe_allow_html=True)
 
     alert = data_service.get_alert_detail(alert_id)
     if not alert:
