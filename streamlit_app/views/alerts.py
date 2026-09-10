@@ -263,39 +263,40 @@ def render_alert_investigation(alert_id: int):
         rule_name = str(gr.get("rule_name", "CYCLE_DETECTION"))
         motif_type = "CIRCULAR RING (CYCLE)"
 
-        motif_inner_html = f"""
-            <div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Originator (Sender)</div>
-                </div>
-                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                    <div>──(₹{alert['TX_AMOUNT']:,.2f})──►</div>
-                    <div style="font-size: 0.68rem; color: #64748B;">Step {alert.get('TIMESTAMP', 1)}</div>
-                </div>
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #7C3AED; background: #FFFFFF; padding: 8px 16px; border: 1px solid #DDD6FE; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Intermediary Relay</div>
-                </div>
-                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                    <div>────►</div>
-                    <div style="font-size: 0.68rem; color: #64748B;">Relay Edge</div>
-                </div>
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{c_acc}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Layering Mule / Node C</div>
-                </div>
-                <div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                    <div>──(Cycle Loop)──►</div>
-                    <div style="font-size: 0.68rem; color: #64748B;">Return to Origin</div>
-                </div>
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Closed Cycle</div>
-                </div>
-            </div>
-        """
+        motif_inner_html = (
+            '<div style="display: flex; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 12px; padding: 12px 6px;">'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Originator (Sender)</div>'
+            '</div>'
+            '<div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">'
+            f'<div>──(₹{alert["TX_AMOUNT"]:,.2f})──►</div>'
+            f'<div style="font-size: 0.68rem; color: #64748B;">Step {alert.get("TIMESTAMP", 1)}</div>'
+            '</div>'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #7C3AED; background: #FFFFFF; padding: 8px 16px; border: 1px solid #DDD6FE; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Intermediary Relay</div>'
+            '</div>'
+            '<div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">'
+            '<div>────►</div>'
+            '<div style="font-size: 0.68rem; color: #64748B;">Relay Edge</div>'
+            '</div>'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{c_acc}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Layering Mule / Node C</div>'
+            '</div>'
+            '<div style="color: #7C3AED; font-weight: 800; font-size: 1.05rem; text-align: center;">'
+            '<div>──(Cycle Loop)──►</div>'
+            '<div style="font-size: 0.68rem; color: #64748B;">Return to Origin</div>'
+            '</div>'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Closed Cycle</div>'
+            '</div>'
+            '</div>'
+        )
     else:
+        c_acc = None
         cycle_id = "None (Acyclic)"
         time_span = 0
         graph_score = 0.0
@@ -303,64 +304,66 @@ def render_alert_investigation(alert_id: int):
         rule_name = "DIRECT_TRANSFER"
         motif_type = "DIRECT TRANSFER (ACYCLIC)"
 
-        motif_inner_html = f"""
-            <div style="display: flex; align-items: center; justify-content: center; gap: 32px; padding: 18px 6px;">
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Sender Vertex</div>
-                </div>
-                <div style="color: #2563EB; font-weight: 800; font-size: 1.05rem; text-align: center;">
-                    <div>──────(₹{alert['TX_AMOUNT']:,.2f})──────►</div>
-                    <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">Direct Transfer Edge</div>
-                </div>
-                <div style="text-align: center;">
-                    <span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>
-                    <div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Receiver Vertex</div>
-                </div>
-            </div>
-        """
+        motif_inner_html = (
+            '<div style="display: flex; align-items: center; justify-content: center; gap: 32px; padding: 18px 6px;">'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #1E3A8A; background: #FFFFFF; padding: 8px 16px; border: 1px solid #CBD5E1; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{snd_id}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Sender Vertex</div>'
+            '</div>'
+            '<div style="color: #2563EB; font-weight: 800; font-size: 1.05rem; text-align: center;">'
+            f'<div>──────(₹{alert["TX_AMOUNT"]:,.2f})──────►</div>'
+            '<div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">Direct Transfer Edge</div>'
+            '</div>'
+            '<div style="text-align: center;">'
+            f'<span class="code-pill" style="font-size: 0.96rem; font-weight: 800; color: #047857; background: #FFFFFF; padding: 8px 16px; border: 1px solid #A7F3D0; box-shadow: 2px 2px 6px #CAD2DC;">ACC_{rcv_id}</span>'
+            '<div style="font-size: 0.72rem; color: #475569; margin-top: 5px; font-weight: 700;">Receiver Vertex</div>'
+            '</div>'
+            '</div>'
+        )
 
-    topology_html = textwrap.dedent(f"""
-        <div class="neo-card" style="padding: 22px 26px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">COUNTERPARTY GRAPH TOPOLOGY</span>
-                    <span class="badge-violet">DATABRICKS GRAPHFRAMES</span>
-                </div>
-                <span class="code-pill">CYCLE ID: {cycle_id}</span>
-            </div>
-            <div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.</div>
-            <div class="neo-graph-motif">
-                {motif_inner_html}
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 0.82rem;">
-                <div>
-                    <span style="color: #64748B;">Graph Rule Name:</span><br>
-                    <b style="color: #1E3A8A;">{rule_name}</b>
-                </div>
-                <div>
-                    <span style="color: #64748B;">Graph Rule Score:</span><br>
-                    <b style="color: #7C3AED;">{graph_score:.1f} / 100</b>
-                </div>
-                <div>
-                    <span style="color: #64748B;">Cycle Time Span:</span><br>
-                    <b style="color: #0F172A;">{time_span} surveillance steps</b>
-                </div>
-                <div>
-                    <span style="color: #64748B;">Motif Classification:</span><br>
-                    <span class="badge-violet">{motif_type}</span>
-                </div>
-            </div>
-            <div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.82rem; color: #334155;">
-                <b>Graph Forensic Evidence:</b> {graph_evidence}
-            </div>
-        </div>
-    """).strip()
+    topology_html = (
+        '<div class="neo-card" style="padding: 22px 26px;">'
+        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">'
+        '<div style="display: flex; align-items: center; gap: 10px;">'
+        '<span style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.02em;">COUNTERPARTY GRAPH TOPOLOGY</span>'
+        '<span class="badge-violet">DATABRICKS GRAPHFRAMES</span>'
+        '</div>'
+        f'<span class="code-pill">CYCLE ID: {cycle_id}</span>'
+        '</div>'
+        '<div style="font-size: 0.82rem; color: #64748B; margin-bottom: 14px;">Forensic topological telemetry populated from <code>aml_poc.graph_results</code>.</div>'
+        f'<div class="neo-graph-motif">{motif_inner_html}</div>'
+        '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid #E2E8F0; font-size: 0.82rem;">'
+        '<div>'
+        '<span style="color: #64748B;">Graph Rule Name:</span><br>'
+        f'<b style="color: #1E3A8A;">{rule_name}</b>'
+        '</div>'
+        '<div>'
+        '<span style="color: #64748B;">Graph Rule Score:</span><br>'
+        f'<b style="color: #7C3AED;">{graph_score:.1f} / 100</b>'
+        '</div>'
+        '<div>'
+        '<span style="color: #64748B;">Cycle Time Span:</span><br>'
+        f'<b style="color: #0F172A;">{time_span} surveillance steps</b>'
+        '</div>'
+        '<div>'
+        '<span style="color: #64748B;">Motif Classification:</span><br>'
+        f'<span class="badge-violet">{motif_type}</span>'
+        '</div>'
+        '</div>'
+        '<div style="margin-top: 12px; padding: 10px 14px; background: #F8FAFC; border-left: 3px solid #7C3AED; border-radius: 6px; font-size: 0.82rem; color: #334155;">'
+        f'<b>Graph Forensic Evidence:</b> {graph_evidence}'
+        '</div>'
+        '</div>'
+    )
     st.markdown(topology_html, unsafe_allow_html=True)
 
     # Graph Quick-Actions Bar
-    col_btn_net, col_btn_a, col_btn_b, col_btn_c = st.columns([1.5, 1, 1, 1])
     pages_map = st.session_state.get("_pages_map", {})
+    if has_cycle and c_acc:
+        col_btn_net, col_btn_a, col_btn_b, col_btn_c = st.columns([1.5, 1, 1, 1])
+    else:
+        col_btn_net, col_btn_a, col_btn_b = st.columns([1.5, 1, 1])
+
     with col_btn_net:
         if st.button("Open in Network Viewer →", key="btn_open_net_from_alert", use_container_width=True, type="primary"):
             st.session_state.selected_network_account = snd_id
@@ -376,11 +379,12 @@ def render_alert_investigation(alert_id: int):
             st.session_state.selected_account = rcv_id
             if "Accounts" in pages_map:
                 st.switch_page(pages_map["Accounts"])
-    with col_btn_c:
-        if st.button(f"Inspect ACC_{c_acc}", key="btn_insp_c", use_container_width=True):
-            st.session_state.selected_account = c_acc
-            if "Accounts" in pages_map:
-                st.switch_page(pages_map["Accounts"])
+    if has_cycle and c_acc:
+        with col_btn_c:
+            if st.button(f"Inspect ACC_{c_acc}", key="btn_insp_c", use_container_width=True):
+                st.session_state.selected_account = c_acc
+                if "Accounts" in pages_map:
+                    st.switch_page(pages_map["Accounts"])
 
     st.write("")
 
