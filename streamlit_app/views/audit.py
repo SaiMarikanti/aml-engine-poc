@@ -1,7 +1,11 @@
 """Audit Log View - Enterprise Case Management Trail."""
 import streamlit as st
 import pandas as pd
-from aml_app.services.data_service import data_service
+try:
+    from services.data_service import data_service
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+
 
 def render_audit():
     st.markdown("""

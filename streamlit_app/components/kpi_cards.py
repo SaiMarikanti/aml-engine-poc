@@ -2,7 +2,11 @@
 Exports render_kpi_card and multi-card layouts.
 """
 import streamlit as st
-from aml_app.components.kpi_card import render_kpi_card
+try:
+    from components.kpi_card import render_kpi_card
+except (ImportError, ModuleNotFoundError):
+    from aml_app.components.kpi_card import render_kpi_card
+
 
 def render_kpi_grid(kpis: list[dict]):
     """Render multiple KPI cards across standard responsive grid columns."""

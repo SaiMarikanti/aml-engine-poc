@@ -5,11 +5,18 @@ import os
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
-from aml_app.config.settings import settings
-from aml_app.services.databricks import DatabricksService
-from aml_app.services.repository_base import RepositoryBase
-from aml_app.services.local_repository import LocalRepository
-from aml_app.services.databricks_repository import DatabricksRepository
+try:
+    from config.settings import settings
+    from services.databricks import DatabricksService
+    from services.repository_base import RepositoryBase
+    from services.local_repository import LocalRepository
+    from services.databricks_repository import DatabricksRepository
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+    from aml_app.services.databricks import DatabricksService
+    from aml_app.services.repository_base import RepositoryBase
+    from aml_app.services.local_repository import LocalRepository
+    from aml_app.services.databricks_repository import DatabricksRepository
 
 databricks_service = DatabricksService()
 
@@ -17,18 +24,14 @@ class AMLDataService:
     def __init__(self):
         mode = os.getenv("AML_MODE", "databricks").lower()
         
-        # Explicit local override
+        # Explicit local override for offline unit testing
         if mode == "local":
             self.repo: RepositoryBase = LocalRepository()
-        elif settings.is_databricks_app_runtime:
-            # Running inside Databricks Apps container: ALWAYS use DatabricksRepository
-            self.repo: RepositoryBase = DatabricksRepository(databricks_service)
-        elif databricks_service.is_configured():
-            # Configured with host & credentials
-            self.repo: RepositoryBase = DatabricksRepository(databricks_service)
         else:
-            # Offline local developer workstation fallback
-            self.repo: RepositoryBase = LocalRepository()
+            # Production default: ALWAYS use DatabricksRepository.
+            # Never silently switch to local SQLite demo data if Databricks connection fails.
+            self.repo: RepositoryBase = DatabricksRepository(databricks_service)
+
 
     @property
     def is_cloud_mode(self) -> bool:
@@ -40,7 +43,25 @@ class AMLDataService:
     def get_discovered_tables(self) -> List[str]:
         if isinstance(self.repo, DatabricksRepository):
             return self.repo.get_available_tables()
-        return ["gold_alerts", "gold_transactions", "gold_accounts", "gold_network", "app_alert_status", "app_alert_comments", "app_audit_log"]
+        return [
+            "silver_transactions",
+            "silver_accounts",
+            "silver_alerts",
+            "ml_training_data",
+            "graph_account_features",
+            "rule_results",
+            "rule_transaction_scores",
+            "bronze_transactions",
+            "bronze_accounts",
+            "bronze_alerts",
+            "otel_spans",
+            "otel_logs",
+            "otel_metrics",
+            "otel_annotations",
+            "app_alert_status",
+            "app_alert_comments",
+            "app_audit_log"
+        ]
 
     def describe_table(self, table_name: str) -> pd.DataFrame:
         if isinstance(self.repo, DatabricksRepository):

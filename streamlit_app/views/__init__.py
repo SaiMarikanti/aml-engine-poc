@@ -1,12 +1,23 @@
 """Views package for Databricks AML Intelligence Platform."""
-from aml_app.views.dashboard import render_dashboard
-from aml_app.views.transactions import render_transactions
-from aml_app.views.alerts import render_alerts
-from aml_app.views.accounts import render_accounts
-from aml_app.views.network import render_network
-from aml_app.views.model_insights import render_model_insights
-from aml_app.views.audit import render_audit
-from aml_app.views.system_status import render_system_status
+try:
+    from views.dashboard import render_dashboard
+    from views.transactions import render_transactions
+    from views.alerts import render_alerts
+    from views.accounts import render_accounts
+    from views.network import render_network
+    from views.model_insights import render_model_insights
+    from views.audit import render_audit
+    from views.system_status import render_system_status
+except (ImportError, ModuleNotFoundError):
+    from aml_app.views.dashboard import render_dashboard
+    from aml_app.views.transactions import render_transactions
+    from aml_app.views.alerts import render_alerts
+    from aml_app.views.accounts import render_accounts
+    from aml_app.views.network import render_network
+    from aml_app.views.model_insights import render_model_insights
+    from aml_app.views.audit import render_audit
+    from aml_app.views.system_status import render_system_status
+
 
 __all__ = [
     "render_dashboard",

@@ -15,9 +15,14 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 
-from aml_app.config.settings import settings
-from aml_app.services.repository_base import RepositoryBase
-from aml_app.services.databricks import DatabricksService
+try:
+    from config.settings import settings
+    from services.repository_base import RepositoryBase
+    from services.databricks import DatabricksService
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+    from aml_app.services.repository_base import RepositoryBase
+    from aml_app.services.databricks import DatabricksService
 
 logger = logging.getLogger(__name__)
 
@@ -447,8 +452,9 @@ class DatabricksRepository(RepositoryBase):
             LIMIT {limit} OFFSET {offset}
         """
         try:
+            df_cnt = self.client.execute_query(f"SELECT count(*) as total_alerts FROM {self._qualify(TABLE_ALERTS)}")
+            total_count = int(df_cnt.iloc[0]["total_alerts"]) if not df_cnt.empty else 0
             df = self.client.execute_query(sql)
-            total_count = len(df)
 
             # Overlay persistent status and assignments from Databricks or session
             for idx, row in df.iterrows():
@@ -872,34 +878,50 @@ class DatabricksRepository(RepositoryBase):
     # =========================================================================
     def get_model_insights(self) -> Dict[str, Any]:
         """Retrieve model insights dynamically connected to ml_training_data in Unity Catalog."""
-        total_tx = 1323234
-        pos_cnt = 1719
-        neg_cnt = 1321515
-
         # Query actual ML training table
+        sql = f"""
+            SELECT 
+                count(*) as total_count,
+                sum(case when label = 1 then 1 else 0 end) as positive_count,
+                sum(case when label = 0 then 1 else 0 end) as negative_count
+            FROM {self._qualify(TABLE_ML_TRAINING)}
+        """
         try:
-            sql = f"""
-                SELECT 
-                    count(*) as total_count,
-                    sum(case when label = 1 then 1 else 0 end) as positive_count,
-                    sum(case when label = 0 then 1 else 0 end) as negative_count
-                FROM {self._qualify(TABLE_ML_TRAINING)}
-            """
             df = self.client.execute_query(sql)
-            if not df.empty and df.iloc[0]["total_count"] is not None:
-                total_tx = int(df.iloc[0]["total_count"])
-                pos_cnt = int(df.iloc[0]["positive_count"] or 0)
-                neg_cnt = int(df.iloc[0]["negative_count"] or (total_tx - pos_cnt))
+            if df.empty or df.iloc[0]["total_count"] is None:
+                raise RuntimeError("Empty response from ml_training_data table")
+            total_tx = int(df.iloc[0]["total_count"])
+            pos_cnt = int(df.iloc[0]["positive_count"] or 0)
+            neg_cnt = int(df.iloc[0]["negative_count"] or (total_tx - pos_cnt))
         except Exception as e:
-            logger.warning(f"Could not query ml_training_data: {e}")
+            logger.error(f"Could not query ml_training_data: {e}")
+            raise RuntimeError(f"Databricks SQL query failed for ML training data: {e}")
 
-        fraud_rate = (pos_cnt / total_tx * 100) if total_tx > 0 else 0.1299
-        imbalance_ratio = f"1 : {int(neg_cnt / pos_cnt)}" if pos_cnt > 0 else "1 : 769"
+        fraud_rate = (pos_cnt / total_tx * 100) if total_tx > 0 else 0.0
+        imbalance_ratio = f"1 : {int(neg_cnt / pos_cnt)}" if pos_cnt > 0 else "N/A"
+
 
         return {
-            "model_name": "XGBoost AML Fraud Classifier (MLflow Registry)",
-            "model_version": "v1.0-batch",
+            "model_name": "XGBoost AML Fraud Classifier",
+            "model_version": "aml_xgboost_final",
             "model_type": "Gradient Boosted Decision Trees (XGBoost)",
+            "experiment_name": "/Shared/AML_POC_XGBoost",
+            "experiment_id": "3299782125965871",
+            "run_name": "aml_xgboost_final",
+            "run_status": "FAILED (Registry write permission)",
+            "owner": "zs7919320@gmail.com",
+            "target_column": "label",
+            "feature_count": 27,
+            "hyperparameters": {
+                "n_estimators": 300,
+                "max_depth": 6,
+                "learning_rate": 0.05,
+                "subsample": 0.8,
+                "colsample_bytree": 0.8,
+                "scale_pos_weight": 20.35,
+                "negative_to_positive_ratio": "20:1",
+                "classification_threshold": 0.98
+            },
             "dataset_summary": {
                 "total_transactions": total_tx,
                 "negative_count": neg_cnt,
@@ -908,25 +930,26 @@ class DatabricksRepository(RepositoryBase):
                 "imbalance_ratio": imbalance_ratio
             },
             "metrics": {
-                "pr_auc": 0.842,
-                "recall": 0.895,
-                "precision": 0.814,
-                "f1_score": 0.852,
-                "roc_auc": 0.978,
-                "precision_at_100": 0.940
+                "accuracy": 0.988,
+                "recall": 0.909,
+                "precision": 0.095,
+                "f1_score": 0.172,
+                "roc_auc": 0.997,
+                "pr_auc": 0.839,
+                "threshold": 0.98
             },
             "confusion_matrix": {
-                "true_negative": int(neg_cnt * 0.20),
-                "false_positive": 23,
-                "false_negative": 36,
-                "true_positive": 308
+                "true_negative": 261763,
+                "false_positive": 2372,
+                "false_negative": 25,
+                "true_positive": 249
             },
             "feature_importance": [
                 {"feature": "tx_amount", "importance": 0.24, "category": "Transaction"},
                 {"feature": "sender_velocity_count", "importance": 0.18, "category": "Velocity"},
                 {"feature": "receiver_velocity_count", "importance": 0.15, "category": "Velocity"},
                 {"feature": "fan_in_feature", "importance": 0.13, "category": "Rule/Topology"},
-                {"feature": "cycle_participant_feature", "importance": 0.11, "category": "Graph/Topology"},
+                {"feature": "cycle_count", "importance": 0.11, "category": "Graph/Topology"},
                 {"feature": "unique_receivers_before", "importance": 0.08, "category": "Behavioral"},
                 {"feature": "high_value_flag", "importance": 0.06, "category": "Rule"},
                 {"feature": "event_time", "importance": 0.05, "category": "Temporal"}

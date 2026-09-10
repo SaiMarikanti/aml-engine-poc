@@ -3,7 +3,11 @@ Provides business logic and data access for AML alerts.
 """
 from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
-from aml_app.services.data_service import data_service
+try:
+    from services.data_service import data_service
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+
 
 def get_alerts(
     status: Optional[str] = None,

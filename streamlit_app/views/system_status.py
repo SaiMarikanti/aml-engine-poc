@@ -1,8 +1,13 @@
 """System Status View - Databricks Lakehouse Technical Health & Verification."""
 import streamlit as st
 import pandas as pd
-from aml_app.config.settings import settings
-from aml_app.services.data_service import data_service, databricks_service
+try:
+    from config.settings import settings
+    from services.data_service import data_service, databricks_service
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+    from aml_app.services.data_service import data_service, databricks_service
+
 
 def render_system_status():
     st.markdown("""
@@ -25,9 +30,10 @@ def render_system_status():
         ("SQL Warehouse", "Available" if data_service.is_cloud_mode else "Active (Local Adapter)", "#059669", f"Resource key: sql-warehouse ({settings.DATABRICKS_WAREHOUSE_ID or 'Serverless Starter Warehouse'})"),
         ("Unity Catalog", "Accessible" if data_service.is_cloud_mode else "Verified", "#059669", f"Target namespace: {settings.DATABRICKS_CATALOG}.{settings.DATABRICKS_SCHEMA}"),
         ("Silver Tables", "Available", "#059669", "silver_accounts, silver_transactions, silver_alerts"),
-        ("Rule Engine Output", "Available", "#059669", "Deterministic AML risk scoring rules"),
-        ("Graph Output", "Available", "#059669", "GraphFrames motifs, cycles, and degree centrality"),
-        ("ML Output", "Available", "#059669", "XGBoost v3 model scores & inferences"),
+        ("Rule Engine Output", "Available", "#059669", "rule_results, rule_transaction_scores (Deterministic rules)"),
+        ("Graph Output", "Available", "#059669", "graph_account_features (Network topology & centrality)"),
+        ("ML Feature Table", "Available", "#059669", "ml_training_data (27 engineered features for XGBoost)"),
+        ("Observability (OTel)", "Configured", "#059669", "otel_spans, otel_logs, otel_metrics, otel_annotations"),
     ]
 
     for title, status_text, dot_color, desc in health_items:

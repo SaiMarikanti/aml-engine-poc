@@ -1,8 +1,13 @@
 """Top Application Header for AML Intelligence Platform."""
 import streamlit as st
 from typing import Dict, Any, Optional
-from aml_app.config.settings import settings
-from aml_app.services.data_service import data_service
+try:
+    from config.settings import settings
+    from services.data_service import data_service
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+    from aml_app.services.data_service import data_service
+
 
 def render_header(pages_map: Optional[Dict[str, Any]] = None):
     """Render the global top bar with branding, instant surveillance search, and triage badge."""

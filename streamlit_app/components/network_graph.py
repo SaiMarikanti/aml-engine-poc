@@ -2,8 +2,13 @@
 import streamlit.components.v1 as components
 from typing import Dict, Any, List
 from pyvis.network import Network
-from aml_app.utils.formatting import score_to_risk_level
-from aml_app.utils.constants import RISK_COLORS
+try:
+    from utils.formatting import score_to_risk_level
+    from utils.constants import RISK_COLORS
+except (ImportError, ModuleNotFoundError):
+    from aml_app.utils.formatting import score_to_risk_level
+    from aml_app.utils.constants import RISK_COLORS
+
 
 def render_pyvis_network(graph_data: Dict[str, Any], height: int = 580):
     """Render an interactive directed graph with physics using PyVis."""

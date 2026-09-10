@@ -1,6 +1,10 @@
 """Formatting utilities for numbers, currency, timestamps, and badges."""
 from datetime import datetime
-from aml_app.utils.constants import RiskLevel, AlertStatus, RISK_COLORS
+try:
+    from utils.constants import RiskLevel, AlertStatus, RISK_COLORS
+except (ImportError, ModuleNotFoundError):
+    from aml_app.utils.constants import RiskLevel, AlertStatus, RISK_COLORS
+
 
 def format_currency(amount: float, symbol: str = "₹") -> str:
     """Format monetary amount with thousands separators and symbol."""

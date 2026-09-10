@@ -1,8 +1,14 @@
 """Network Analysis View - GraphFrames Visualization via PyVis."""
 import streamlit as st
-from aml_app.services.data_service import data_service
-from aml_app.components.network_graph import render_pyvis_network
-from aml_app.utils.formatting import render_risk_badge
+try:
+    from services.data_service import data_service
+    from components.network_graph import render_pyvis_network
+    from utils.formatting import render_risk_badge
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+    from aml_app.components.network_graph import render_pyvis_network
+    from aml_app.utils.formatting import render_risk_badge
+
 
 def render_network():
     pages_map = st.session_state.get("_pages_map", {})

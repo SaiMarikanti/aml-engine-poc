@@ -3,11 +3,19 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-from aml_app.services.data_service import data_service
-from aml_app.components.breadcrumbs import render_breadcrumbs
-from aml_app.components.alert_card import render_evidence_chip
-from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
-from aml_app.utils.constants import AlertStatus, DetectionEngine
+try:
+    from services.data_service import data_service
+    from components.breadcrumbs import render_breadcrumbs
+    from components.alert_card import render_evidence_chip
+    from utils.formatting import format_currency, render_risk_badge, render_status_chip
+    from utils.constants import AlertStatus, DetectionEngine
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+    from aml_app.components.breadcrumbs import render_breadcrumbs
+    from aml_app.components.alert_card import render_evidence_chip
+    from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
+    from aml_app.utils.constants import AlertStatus, DetectionEngine
+
 
 def render_alerts():
     # Check if an alert is selected for deep investigation

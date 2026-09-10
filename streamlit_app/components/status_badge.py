@@ -1,5 +1,9 @@
 """Status badges and risk indicators."""
-from aml_app.utils.formatting import render_risk_badge, render_status_chip
+try:
+    from utils.formatting import render_risk_badge, render_status_chip
+except (ImportError, ModuleNotFoundError):
+    from aml_app.utils.formatting import render_risk_badge, render_status_chip
+
 
 def risk_badge_html(risk: str) -> str:
     return render_risk_badge(risk)

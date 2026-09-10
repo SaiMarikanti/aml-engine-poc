@@ -7,7 +7,11 @@ import os
 import sqlite3
 import pandas as pd
 from datetime import datetime
-from aml_app.config.settings import settings
+try:
+    from config.settings import settings
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+
 
 def get_db_connection() -> sqlite3.Connection:
     """Return a connection with row factory enabled."""

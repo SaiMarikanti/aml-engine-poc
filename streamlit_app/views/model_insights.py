@@ -2,8 +2,13 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from aml_app.services.data_service import data_service
-from aml_app.components.kpi_card import render_kpi_card
+try:
+    from services.data_service import data_service
+    from components.kpi_card import render_kpi_card
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+    from aml_app.components.kpi_card import render_kpi_card
+
 
 def render_model_insights():
     st.markdown("""
@@ -23,32 +28,59 @@ def render_model_insights():
 
     metrics = insights["metrics"]
     ds = insights["dataset_summary"]
+    hp = insights.get("hyperparameters", {})
 
-    # Model Overview Card
+    # 1. Model Overview Card with MLflow Experiment Tracking Details
     st.markdown(f"""
         <div class="neo-card" style="padding: 20px 24px;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
                 <div>
                     <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; color: #1E3A8A;">{insights['model_name']}</h3>
                     <div style="color: #68707A; font-size: 0.88rem; margin-top: 4px;">
-                        Model Version: <b style="color: #20242A;">{insights['model_version']}</b> 
-                        • Engine: <b>{insights['model_type']}</b> 
-                        • Target: <code>transactions.IS_FRAUD</code>
+                        MLflow Run: <b style="color: #20242A;">{insights.get('run_name', 'aml_xgboost_final')}</b> 
+                        • Experiment: <code>{insights.get('experiment_name', '/Shared/AML_POC_XGBoost')}</code>
+                        • ID: <code>{insights.get('experiment_id', '3299782125965871')}</code>
+                    </div>
+                    <div style="color: #68707A; font-size: 0.84rem; margin-top: 4px;">
+                        Engine: <b>{insights['model_type']}</b> 
+                        • Features: <b>{insights.get('feature_count', 27)} engineered features</b> 
+                        • Target: <code>ml_training_data.{insights.get('target_column', 'label')}</code>
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <span class="status-chip status-closed">REGISTERED IN UNITY CATALOG</span>
-                    <div style="font-size: 0.8rem; color: #68707A; margin-top: 4px;">Surveillance Baseline: <b>v3</b></div>
+                    <span class="status-chip status-closed">TRACKED IN MLFLOW</span>
+                    <div style="font-size: 0.8rem; color: #68707A; margin-top: 4px;">Owner: <b>{insights.get('owner', 'zs7919320@gmail.com')}</b></div>
                 </div>
+            </div>
+            <div style="margin-top: 10px; padding: 6px 12px; background: #FEF3C7; border-left: 3px solid #D97706; border-radius: 4px; font-size: 0.8rem; color: #92400E;">
+                <b>MLflow Run Status:</b> Baseline evaluation metrics recorded in MLflow run <code>{insights.get('run_name', 'aml_xgboost_final')}</code>. (Note: Registry write to Unity Catalog requires UC Model Registry permissions).
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # Class Population Summary Card
+    # 2. Hyperparameters Pill Bar
+    if hp:
+        st.markdown(f"""
+            <div class="neo-card-sm" style="background: #F8FAFC; padding: 12px 18px; margin-bottom: 16px; border: 1px solid #E2E8F0; border-radius: 8px;">
+                <div style="font-size: 0.8rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">TUNED HYPERPARAMETERS (MLFLOW LOGGED):</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82rem; color: #374151;">
+                    <span class="code-pill">n_estimators: {hp.get('n_estimators', 300)}</span>
+                    <span class="code-pill">max_depth: {hp.get('max_depth', 6)}</span>
+                    <span class="code-pill">learning_rate: {hp.get('learning_rate', 0.05)}</span>
+                    <span class="code-pill">subsample: {hp.get('subsample', 0.8)}</span>
+                    <span class="code-pill">colsample_bytree: {hp.get('colsample_bytree', 0.8)}</span>
+                    <span class="code-pill">scale_pos_weight: {hp.get('scale_pos_weight', 20.35)}</span>
+                    <span class="code-pill">neg_to_pos_ratio: {hp.get('negative_to_positive_ratio', '20:1')}</span>
+                    <span class="code-pill" style="background: #FEF3C7; color: #92400E; font-weight: 700;">classification_threshold: {hp.get('classification_threshold', 0.98)}</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # 3. Class Population Summary Card
     st.markdown(f"""
         <div class="neo-card-sm" style="display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; margin-bottom: 18px;">
             <div style="font-size: 0.84rem; color: #4B5563;">
-                <b>Surveillance Population:</b> {ds['total_transactions']:,} transactions 
+                <b>Surveillance Population (ml_training_data):</b> {ds['total_transactions']:,} transactions 
                 (<span style="color: #059669; font-weight: 600;">{ds['negative_count']:,} Legitimate</span> vs 
                  <span style="color: #DC2626; font-weight: 700;">{ds['positive_count']:,} Confirmed Laundering</span>)
             </div>
@@ -58,25 +90,32 @@ def render_model_insights():
         </div>
     """, unsafe_allow_html=True)
 
-    # Core Metrics: Precision, Recall, F1, PR-AUC
+    # 4. Core Holdout Evaluation Metrics
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        render_kpi_card("PRECISION", f"{metrics['precision']*100:.1f}%", "Controlled false positive rate", trend_positive=True)
+        render_kpi_card("RECALL (DETECTION)", f"{metrics['recall']*100:.1f}%", "Caught 249 of 274 fraud cases", trend_positive=True, alert_level="success")
     with c2:
-        render_kpi_card("RECALL (DETECTION)", f"{metrics['recall']*100:.1f}%", "89.5% fraud captured", trend_positive=True, alert_level="success")
+        render_kpi_card("ROC-AUC", f"{metrics['roc_auc']*100:.1f}%", "Strong class separation", trend_positive=True, alert_level="success")
     with c3:
-        f1_score = 2 * (metrics['precision'] * metrics['recall']) / (metrics['precision'] + metrics['recall']) if (metrics['precision'] + metrics['recall']) > 0 else 0.0
-        render_kpi_card("F1-SCORE", f"{f1_score:.3f}", "Harmonic balance on holdout", trend_positive=True)
+        render_kpi_card("PR-AUC", f"{metrics['pr_auc']*100:.1f}%", "Key imbalanced metric", trend_positive=True, alert_level="success")
     with c4:
-        render_kpi_card("PR-AUC", f"{metrics['pr_auc']:.3f}", "Primary metric for class imbalance", trend_positive=True, alert_level="success")
+        render_kpi_card("PRECISION", f"{metrics['precision']*100:.1f}%", "2,372 false positives (0.98 threshold)", trend_positive=False, alert_level="warning")
 
-    # Visualizations: Feature Importance (Gain) & Confusion Matrix
+    # 5. Operational Trade-Off Callout
+    st.markdown("""
+        <div style="background: #EFF6FF; border-left: 4px solid #2563EB; padding: 12px 16px; margin: 16px 0; border-radius: 4px; font-size: 0.86rem; color: #1E40AF;">
+            <b>Operational Context:</b> High recall (<b>90.9%</b>) ensures investigators capture the vast majority of money laundering schemes. 
+            The low precision (<b>9.5%</b>) reflects the extreme real-world class imbalance (20:1) and the conservative <b>0.98 threshold</b> configured to minimize false negatives (missed fraud).
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 6. Visualizations: Feature Importance (Gain) & Confusion Matrix
     col_feat, col_matrix = st.columns([1.4, 1])
 
     with col_feat:
         st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
         st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">XGBOOST FEATURE IMPORTANCE (GAIN)</div>', unsafe_allow_html=True)
-        st.caption("Relative information gain per engineered feature.")
+        st.caption("Relative information gain per engineered feature from ml_training_data.")
         
         df_feat = pd.DataFrame(insights["feature_importance"])
         df_feat = df_feat.sort_values(by="importance", ascending=True)
@@ -103,7 +142,7 @@ def render_model_insights():
     with col_matrix:
         st.markdown('<div class="neo-card" style="padding: 20px;">', unsafe_allow_html=True)
         st.markdown('<div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">HOLDOUT CONFUSION MATRIX</div>', unsafe_allow_html=True)
-        st.caption("Classification outcomes on out-of-time test dataset.")
+        st.caption("Holdout evaluation: 249 caught fraud vs 2,372 false alarms.")
 
         cm = insights["confusion_matrix"]
         cm_data = [

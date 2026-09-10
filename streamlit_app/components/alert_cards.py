@@ -1,8 +1,13 @@
 """Alert Cards Component.
 Exports alert rendering utilities and evidence chips.
 """
-from aml_app.components.alert_card import render_evidence_chip
-from aml_app.utils.formatting import render_risk_badge, render_status_chip, format_currency
+try:
+    from components.alert_card import render_evidence_chip
+    from utils.formatting import render_risk_badge, render_status_chip, format_currency
+except (ImportError, ModuleNotFoundError):
+    from aml_app.components.alert_card import render_evidence_chip
+    from aml_app.utils.formatting import render_risk_badge, render_status_chip, format_currency
+
 
 def render_alert_summary_card(alert: dict) -> str:
     """Generate HTML card for an alert summary."""

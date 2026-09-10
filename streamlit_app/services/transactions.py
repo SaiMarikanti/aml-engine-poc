@@ -3,7 +3,11 @@ Provides business logic and data access for AML transactions.
 """
 from typing import Any, Dict, Optional, Tuple
 import pandas as pd
-from aml_app.services.data_service import data_service
+try:
+    from services.data_service import data_service
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+
 
 def search_transactions(
     tx_id: Optional[int] = None,

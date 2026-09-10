@@ -1,9 +1,15 @@
 """Account Risk Profile - 360 Degree View."""
 import streamlit as st
 import pandas as pd
-from aml_app.services.data_service import data_service
-from aml_app.components.breadcrumbs import render_breadcrumbs
-from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
+try:
+    from services.data_service import data_service
+    from components.breadcrumbs import render_breadcrumbs
+    from utils.formatting import format_currency, render_risk_badge, render_status_chip
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+    from aml_app.components.breadcrumbs import render_breadcrumbs
+    from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
+
 
 def render_accounts():
     pages_map = st.session_state.get("_pages_map", {})

@@ -61,7 +61,7 @@ with zipfile.ZipFile(ZIP_APP_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
             if file.endswith((".pyc", ".db", ".csv", ".parquet", ".delta", ".zip")) or file.startswith(".env"):
                 continue
             full_path = os.path.join(root, file)
-            arc_name = os.path.relpath(full_path, WORKSPACE).replace("\\", "/")
+            arc_name = os.path.relpath(full_path, TARGET_DIR).replace("\\", "/")
             zf.write(full_path, arc_name)
 
 # 3. Create aml-test/ directory and minimal aml-test.zip
@@ -85,7 +85,7 @@ with zipfile.ZipFile(ZIP_TEST_PATH, "w", zipfile.ZIP_DEFLATED) as zf:
     for root, dirs, files in os.walk(TEST_DIR):
         for file in files:
             full_path = os.path.join(root, file)
-            arc_name = os.path.relpath(full_path, WORKSPACE).replace("\\", "/")
+            arc_name = os.path.relpath(full_path, TEST_DIR).replace("\\", "/")
             zf.write(full_path, arc_name)
 
 # Cleanup staging directories to keep workspace pristine

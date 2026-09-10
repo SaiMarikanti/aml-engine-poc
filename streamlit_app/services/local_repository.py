@@ -5,8 +5,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import pandas as pd
 from datetime import datetime
 
-from aml_app.services.repository_base import RepositoryBase
-from aml_app.services.local_lakehouse import get_db_connection, init_lakehouse
+try:
+    from services.repository_base import RepositoryBase
+    from services.local_lakehouse import get_db_connection, init_lakehouse
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.repository_base import RepositoryBase
+    from aml_app.services.local_lakehouse import get_db_connection, init_lakehouse
+
 
 class LocalRepository(RepositoryBase):
     def __init__(self):

@@ -3,9 +3,15 @@ import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
 
-from aml_app.services.data_service import data_service
-from aml_app.components.kpi_card import render_kpi_card
-from aml_app.utils.formatting import format_number, render_risk_badge, render_status_chip
+try:
+    from services.data_service import data_service
+    from components.kpi_card import render_kpi_card
+    from utils.formatting import format_number, render_risk_badge, render_status_chip
+except (ImportError, ModuleNotFoundError):
+    from aml_app.services.data_service import data_service
+    from aml_app.components.kpi_card import render_kpi_card
+    from aml_app.utils.formatting import format_number, render_risk_badge, render_status_chip
+
 
 def render_dashboard():
     # 1. Title Area
@@ -54,27 +60,32 @@ def render_dashboard():
                     st.switch_page(pages_map["System Status"])
 
     # 3. Four Primary KPI Cards
+    total_alerts_cnt = kpis.get("total_alerts", 0)
+    high_risk_cnt = kpis.get("high_risk_alerts", 0)
+    suspicious_vol = kpis.get("suspicious_volume", 0.0)
+    high_risk_pct = (high_risk_cnt / max(1, total_alerts_cnt) * 100) if total_alerts_cnt > 0 else 0.0
+
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         render_kpi_card(
             "TOTAL TRANSACTIONS", 
             format_number(kpis.get("total_transactions", 0)), 
-            "+4.8% today", 
+            "Live from silver_transactions", 
             trend_positive=True
         )
     with c2:
         render_kpi_card(
             "ACTIVE ALERTS", 
-            format_number(kpis.get("total_alerts", 0)), 
-            "182 require review", 
+            format_number(total_alerts_cnt), 
+            f"${suspicious_vol:,.2f} flagged", 
             trend_positive=False, 
             alert_level="warning"
         )
     with c3:
         render_kpi_card(
             "HIGH & CRITICAL", 
-            format_number(kpis.get("high_risk_alerts", 0)), 
-            "24 new today", 
+            format_number(high_risk_cnt), 
+            f"{high_risk_pct:.1f}% of total alerts", 
             trend_positive=False, 
             alert_level="critical"
         )
@@ -82,7 +93,7 @@ def render_dashboard():
         render_kpi_card(
             "OPEN CASES", 
             format_number(kpis.get("open_cases", 0)), 
-            "18 overdue", 
+            "Requires analyst triage", 
             trend_positive=True, 
             alert_level="normal"
         )

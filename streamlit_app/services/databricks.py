@@ -19,7 +19,11 @@ except Exception as e:
     Config = None
     cfg = None
 
-from aml_app.config.settings import settings
+try:
+    from config.settings import settings
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+
 
 logger = logging.getLogger(__name__)
 

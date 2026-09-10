@@ -1,6 +1,10 @@
 """Alert Triage Card Component."""
 import streamlit as st
-from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
+try:
+    from utils.formatting import format_currency, render_risk_badge, render_status_chip
+except (ImportError, ModuleNotFoundError):
+    from aml_app.utils.formatting import format_currency, render_risk_badge, render_status_chip
+
 
 def render_evidence_chip(engine_name: str, triggered: bool, label: str):
     """Render a clean evidence card for Rule / Graph / ML."""
