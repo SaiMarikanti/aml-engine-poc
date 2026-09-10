@@ -78,22 +78,33 @@ def render_pyvis_network(graph_data: Dict[str, Any], height: int = 580):
     # Add Nodes
     for n in nodes:
         acc_id = n["id"]
-        risk_score = n.get("risk_score", 0.1)
-        risk_lvl = score_to_risk_level(risk_score)
-        color = RISK_COLORS[risk_lvl]
         is_root = n.get("is_root", False)
-        
-        size = 28 if is_root else 18
-        border_color = "#1E3A8A" if is_root else "#64748B"
-        
+        is_fraud = n.get("is_fraud", False)
+        tot_deg = n.get("total_degree", 0)
+        in_deg = n.get("in_degree", 0)
+        out_deg = n.get("out_degree", 0)
+
+        if is_root:
+            color = "#1E3A8A"  # Deep Indigo (Selected Focus Account)
+            border_color = "#0F172A"
+            size = 28
+        elif is_fraud:
+            color = "#DC2626"  # Red (Confirmed Fraud Tag in Silver)
+            border_color = "#991B1B"
+            size = 22
+        else:
+            color = "#7C3AED"  # Purple (Precomputed GraphFrames Cycle Vertex)
+            border_color = "#5B21B6"
+            size = 18
+
         tooltip = (
             f"Account: ACC_{acc_id}\n"
-            f"Risk Score: {risk_score:.2f} ({risk_lvl.value})\n"
-            f"Country: {n.get('country', 'Unknown')}\n"
-            f"Type: {n.get('type', 'Individual')}\n"
-            f"Open Alerts: {n.get('open_alerts', 0)}"
+            f"Role: {'Focus Account' if is_root else ('Confirmed Fraud Participant' if is_fraud else 'Cycle Participant')}\n"
+            f"Total Degree: {tot_deg} (In: {in_deg}, Out: {out_deg})\n"
+            f"Country: {n.get('country', 'US')}\n"
+            f"Type: {n.get('type', 'I')}"
         )
-        
+
         net.add_node(
             acc_id,
             label=f"ACC_{acc_id}" + (" (Focus)" if is_root else ""),
@@ -107,15 +118,15 @@ def render_pyvis_network(graph_data: Dict[str, Any], height: int = 580):
     for e in edges:
         src = e["source"]
         dst = e["target"]
-        count = e.get("count", 1)
-        vol = e.get("volume", 0.0)
-        has_alert = e.get("has_alert", False) or count >= 5
-        
-        edge_color = "#DC2626" if has_alert else "#94A3B8"
-        edge_width = min(1 + count, 6)
-        
-        tooltip = f"Transfers: {count}\nTotal Volume: ₹{vol:,.2f}"
-        
+        cid = e.get("cycle_id", "")
+        rule = e.get("rule", "CYCLE_DETECTION")
+        score = e.get("score", 0.0)
+
+        edge_color = "#7C3AED" if cid else "#94A3B8"
+        edge_width = 3 if cid else 1
+
+        tooltip = f"Rule: {rule}\nCycle ID: {cid}\nGraph Score: {score}" if cid else f"Directed Edge: ACC_{src} -> ACC_{dst}"
+
         net.add_edge(
             src, 
             dst, 

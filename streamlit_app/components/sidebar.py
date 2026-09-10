@@ -83,19 +83,19 @@ def render_sidebar(current_page: Optional[Any] = None, pages_map: Optional[Dict[
                     <span style="font-weight: 600; color: #334155;">
                         <span class="neo-status-dot"></span>SQL Warehouse
                     </span>
-                    <span style="font-weight: 700; color: #059669;">Ready</span>
+                    <span style="font-weight: 700; color: #059669;">Online</span>
                 </div>
                 <div class="neo-status-row">
                     <span style="font-weight: 600; color: #334155;">
-                        <span class="neo-status-dot"></span>Data ({settings.DATA_SCHEMA})
+                        <span class="neo-status-dot"></span>Unity Catalog
                     </span>
-                    <span style="font-weight: 700; color: #059669;">SELECT</span>
+                    <span style="font-weight: 700; color: #1E3A8A;">{settings.CATALOG}</span>
                 </div>
                 <div class="neo-status-row">
                     <span style="font-weight: 600; color: #334155;">
-                        <span class="neo-status-dot"></span>App ({settings.APP_SCHEMA})
+                        <span class="neo-status-dot"></span>Data Connected
                     </span>
-                    <span style="font-weight: 700; color: #1E3A8A;">MODIFY</span>
+                    <span style="font-weight: 700; color: #059669;">{settings.DATA_SCHEMA}</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)

@@ -32,6 +32,11 @@ def render_model_insights():
     hp = insights.get("hyperparameters", {})
 
     # 1. Model Overview Card with MLflow Experiment Tracking Details
+    run_status_display = insights.get('run_status', 'UNAVAILABLE')
+    status_bg = "#FEE2E2" if run_status_display in ("FAILED", "UNAVAILABLE") else "#DCFCE7"
+    status_fg = "#991B1B" if run_status_display in ("FAILED", "UNAVAILABLE") else "#166534"
+    status_border = "#FCA5A5" if run_status_display in ("FAILED", "UNAVAILABLE") else "#86EFAC"
+
     st.markdown(f"""
         <div class="neo-card" style="padding: 20px 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -49,7 +54,7 @@ def render_model_insights():
                     </div>
                 </div>
                 <div style="text-align: right;">
-                    <span class="status-chip" style="background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; font-weight: 800;">RUN STATUS: FAILED</span>
+                    <span class="status-chip" style="background: {status_bg}; color: {status_fg}; border: 1px solid {status_border}; font-weight: 800;">RUN STATUS: {run_status_display}</span>
                     <div style="font-size: 0.8rem; color: #68707A; margin-top: 4px;">Owner: <b>{insights.get('owner', 'zs7919320@gmail.com')}</b></div>
                 </div>
             </div>
@@ -59,25 +64,18 @@ def render_model_insights():
         </div>
     """, unsafe_allow_html=True)
 
-    # 2. Hyperparameters Pill Bar
+    # 2. Hyperparameters Pill Bar (Only when retrieved from MLflow)
     if hp:
         st.markdown(f"""
             <div class="neo-card-sm" style="background: #F8FAFC; padding: 14px 18px; margin-bottom: 16px; border: 1px solid #E2E8F0; border-radius: 8px;">
-                <div style="font-size: 0.82rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.04em; margin-bottom: 8px;">MODEL HYPERPARAMETERS (MLFLOW LOGGED):</div>
+                <div style="font-size: 0.82rem; font-weight: 800; color: #1E3A8A; letter-spacing: 0.04em; margin-bottom: 8px;">MODEL HYPERPARAMETERS (SOURCE: MLFLOW):</div>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.82rem; color: #374151;">
-                    <span class="code-pill">n_estimators: {hp.get('n_estimators', 300)}</span>
-                    <span class="code-pill">max_depth: {hp.get('max_depth', 6)}</span>
-                    <span class="code-pill">learning_rate: {hp.get('learning_rate', 0.05)}</span>
-                    <span class="code-pill">subsample: {hp.get('subsample', 0.8)}</span>
-                    <span class="code-pill">colsample_bytree: {hp.get('colsample_bytree', 0.8)}</span>
-                    <span class="code-pill">scale_pos_weight: {hp.get('scale_pos_weight', 20.35)}</span>
-                    <span class="code-pill">neg_to_pos_ratio: {hp.get('negative_to_positive_ratio', '20:1')}</span>
-                    <span class="code-pill" style="background: #FEF3C7; color: #92400E; font-weight: 700;">classification_threshold: {hp.get('classification_threshold', 0.98)}</span>
+                    {"".join(f'<span class="code-pill">{k}: {v}</span>' for k, v in hp.items())}
                 </div>
             </div>
         """, unsafe_allow_html=True)
 
-    # 3. Class Population Summary Card
+    # 3. Class Population Summary Card (Live from ml_training_data)
     st.markdown(f"""
         <div class="neo-card-sm" style="display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; margin-bottom: 18px;">
             <div style="font-size: 0.84rem; color: #4B5563;">
@@ -91,16 +89,26 @@ def render_model_insights():
         </div>
     """, unsafe_allow_html=True)
 
-    # 4. Core Holdout Evaluation Metrics
+    # If MLflow is unavailable, show explicit notice and do not fabricate metrics
+    if not insights.get("mlflow_available") and not metrics:
+        st.warning("⚠️ **MLflow Run Data Unavailable**: Could not retrieve logged metrics from Databricks MLflow tracking server for Experiment `/Shared/AML_POC_XGBoost`. Ensure Databricks MLflow permissions are active. No fabricated fallback metrics are displayed.")
+        return
+
+    # 4. Core Holdout Evaluation Metrics (Only rendered when actual MLflow metrics exist)
+    recall_val = metrics.get("recall", 0.0)
+    roc_auc_val = metrics.get("roc_auc", 0.0)
+    pr_auc_val = metrics.get("pr_auc", 0.0)
+    precision_val = metrics.get("precision", 0.0)
+
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        render_kpi_card("RECALL (DETECTION)", f"{metrics['recall']*100:.1f}%", "Caught 249 of 274 fraud cases", trend_positive=True, alert_level="success")
+        render_kpi_card("RECALL (DETECTION)", f"{recall_val*100:.1f}%", "Captured laundering cases", trend_positive=True, alert_level="success")
     with c2:
-        render_kpi_card("ROC-AUC", f"{metrics['roc_auc']*100:.1f}%", "Strong class separation", trend_positive=True, alert_level="success")
+        render_kpi_card("ROC-AUC", f"{roc_auc_val*100:.1f}%", "Class separation metric", trend_positive=True, alert_level="success")
     with c3:
-        render_kpi_card("PR-AUC", f"{metrics['pr_auc']*100:.1f}%", "Key imbalanced metric", trend_positive=True, alert_level="success")
+        render_kpi_card("PR-AUC", f"{pr_auc_val*100:.1f}%", "Key imbalanced metric", trend_positive=True, alert_level="success")
     with c4:
-        render_kpi_card("PRECISION", f"{metrics['precision']*100:.1f}%", "2,372 false positives (0.98 threshold)", trend_positive=False, alert_level="warning")
+        render_kpi_card("PRECISION", f"{precision_val*100:.1f}%", "False positive tradeoff", trend_positive=False, alert_level="warning")
 
     # 5. Operational Trade-Off Callout (Honest AML Interpretation)
     st.markdown(f"""
@@ -109,8 +117,8 @@ def render_model_insights():
                 <span>⚠️ AML OPERATIONAL ASSESSMENT: HIGH RECALL • LOW PRECISION</span>
             </div>
             <div style="line-height: 1.5;">
-                • <b>High Recall ({metrics['recall']*100:.1f}%):</b> Captures 249 of 274 true laundering schemes in the holdout test set.<br/>
-                • <b>Low Precision ({metrics['precision']*100:.1f}%):</b> Generates 2,372 false alarms at the conservative 0.98 decision threshold.<br/>
+                • <b>High Recall ({recall_val*100:.1f}%):</b> Optimizes capture of true laundering schemes in the holdout test set.<br/>
+                • <b>Low Precision ({precision_val*100:.1f}%):</b> Generates triage volume at conservative decision thresholds.<br/>
                 • <b>Operational Trade-Off:</b> Useful for high-sensitivity surveillance screening to avoid missed laundering, but generates substantial investigator triage workload.
             </div>
         </div>

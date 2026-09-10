@@ -478,29 +478,24 @@ class DatabricksRepository(RepositoryBase):
 
         # Display precomputed pipeline outputs directly without arbitrary local recalculation
         is_fraud = bool(row.get("IS_FRAUD"))
-        normalized_rule_score = min(1.0, rule_score_total / 100.0)
+        rule_reason = (rule_evidences[0] if rule_evidences else f"Rules: {rule_evidence_str}") if (len(rule_names) > 0 or rule_score_total > 0) else "Standard deterministic limits respected"
 
+        # Read actual pipeline values
         if is_fraud:
             risk_score = 1.0
             risk_level = "CRITICAL"
-        elif graph_triggered or normalized_rule_score >= 0.75:
-            risk_score = max(round(normalized_rule_score, 2), 0.85 if graph_triggered else 0.75)
-            risk_level = "CRITICAL" if risk_score >= 0.85 else "HIGH"
-        elif normalized_rule_score >= 0.40:
-            risk_score = round(normalized_rule_score, 2)
-            risk_level = "MEDIUM"
+        elif rule_score_total > 0:
+            risk_score = round(rule_score_total / 100.0, 2)
+            risk_level = "HIGH" if rule_score_total >= 75 else ("MEDIUM" if rule_score_total >= 50 else "LOW")
         else:
-            risk_score = 0.20
+            risk_score = 0.0
             risk_level = "LOW"
-
-        rule_reason = (rule_evidences[0] if rule_evidences else f"Rules: {rule_evidence_str}") if (len(rule_names) > 0 or rule_score_total > 0) else "Standard deterministic limits respected"
-        ml_prob = risk_score
 
         rule_det = {
             "triggered": len(rule_names) > 0 or rule_score_total > 0,
             "reason": rule_reason,
             "label": rule_evidence_str,
-            "score": normalized_rule_score
+            "score": rule_score_total
         }
         graph_det = {
             "triggered": graph_triggered,
@@ -509,10 +504,10 @@ class DatabricksRepository(RepositoryBase):
             "score": graph_rule_score
         }
         ml_det = {
-            "triggered": is_fraud or risk_score >= 0.65,
-            "reason": f"Pipeline Risk Score: {risk_score:.2f} ({risk_level})" if (is_fraud or risk_score >= 0.50) else "Low ML anomaly classification",
-            "label": f"Risk Score: {risk_score:.2f}",
-            "probability": ml_prob
+            "triggered": is_fraud,
+            "reason": "Confirmed fraud record in Databricks Silver layer" if is_fraud else "No ML anomaly flag triggered",
+            "label": "Confirmed Fraud" if is_fraud else "Normal",
+            "probability": 1.0 if is_fraud else 0.0
         }
 
         row["detectors"] = {
@@ -521,8 +516,9 @@ class DatabricksRepository(RepositoryBase):
             "ml_model": ml_det,
             "machine_learning": ml_det
         }
-        row["RULE_SCORE"] = normalized_rule_score
-        row["ML_PROBABILITY"] = ml_prob
+        row["RULE_SCORE"] = rule_score_total
+        row["GRAPH_SCORE"] = graph_rule_score
+        row["ML_PROBABILITY"] = 1.0 if is_fraud else 0.0
         row["RISK_SCORE"] = risk_score
         row["RISK_LEVEL"] = risk_level
         row["TRIGGERED_RULES"] = rule_evidence_str
@@ -1047,7 +1043,6 @@ class DatabricksRepository(RepositoryBase):
     # =========================================================================
     def get_network_graph(self, root_account_id: int, depth: int = 1) -> Dict[str, Any]:
         """Display precomputed GraphFrames cycle topologies directly from graph_results and graph_account_features."""
-        # 1. Fetch precomputed cycles from graph_results (No silver_transactions recalculation)
         sql_cycles = f"""
             SELECT cycle_id, account_a, account_b, account_c, cycle_time_span, graph_rule_score, graph_evidence, rule_name 
             FROM {self._qualify(TABLE_GRAPH_RESULTS)} 
@@ -1066,41 +1061,15 @@ class DatabricksRepository(RepositoryBase):
         if not df_cycles.empty:
             for _, r in df_cycles.iterrows():
                 a, b, c = int(r["account_a"]), int(r["account_b"]), int(r["account_c"])
-                score = float(r.get("graph_rule_score", 50.0))
+                score = float(r.get("graph_rule_score", 0.0))
                 cid = str(r.get("cycle_id", ""))
                 rule = str(r.get("rule_name", "CYCLE_DETECTION"))
-                edges.append({"source": a, "target": b, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": score, "cycle_id": cid, "rule": rule, "has_alert": True})
-                edges.append({"source": b, "target": c, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": score, "cycle_id": cid, "rule": rule, "has_alert": True})
-                edges.append({"source": c, "target": a, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": score, "cycle_id": cid, "rule": rule, "has_alert": True})
+                edges.append({"source": a, "target": b, "cycle_id": cid, "score": score, "rule": rule})
+                edges.append({"source": b, "target": c, "cycle_id": cid, "score": score, "rule": rule})
+                edges.append({"source": c, "target": a, "cycle_id": cid, "score": score, "rule": rule})
                 acc_ids.update([a, b, c])
 
-            # Multi-hop expansion strictly from graph_results if requested
-            if depth > 1 and len(acc_ids) > 1:
-                other_ids = [str(x) for x in acc_ids if x != root_account_id]
-                if other_ids:
-                    id_sub = ",".join(other_ids[:20])
-                    sql_multi = f"""
-                        SELECT cycle_id, account_a, account_b, account_c, cycle_time_span, graph_rule_score, graph_evidence, rule_name 
-                        FROM {self._qualify(TABLE_GRAPH_RESULTS)} 
-                        WHERE account_a IN ({id_sub}) OR account_b IN ({id_sub}) OR account_c IN ({id_sub})
-                        LIMIT 50
-                    """
-                    try:
-                        df_multi = self.client.execute_query(sql_multi)
-                        if not df_multi.empty:
-                            for _, mr in df_multi.iterrows():
-                                ma, mb, mc = int(mr["account_a"]), int(mr["account_b"]), int(mr["account_c"])
-                                mscore = float(mr.get("graph_rule_score", 50.0))
-                                mcid = str(mr.get("cycle_id", ""))
-                                mrule = str(mr.get("rule_name", "CYCLE_DETECTION"))
-                                edges.append({"source": ma, "target": mb, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": mscore, "cycle_id": mcid, "rule": mrule, "has_alert": True})
-                                edges.append({"source": mb, "target": mc, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": mscore, "cycle_id": mcid, "rule": mrule, "has_alert": True})
-                                edges.append({"source": mc, "target": ma, "count": 1, "volume": 0.0, "type": "CYCLE_EDGE", "score": mscore, "cycle_id": mcid, "rule": mrule, "has_alert": True})
-                                acc_ids.update([ma, mb, mc])
-                    except Exception as me:
-                        logger.warning(f"Could not expand multi-hop graph_results: {me}")
-
-        # Fetch vertex features directly from graph_account_features, silver_accounts, and silver_alerts
+        # Fetch vertex features directly from graph_account_features and silver_accounts
         id_list_str = ", ".join(str(i) for i in acc_ids)
         sql_nodes = f"""
             SELECT 
@@ -1110,15 +1079,9 @@ class DatabricksRepository(RepositoryBase):
                 a.is_fraud,
                 coalesce(g.total_degree, 0) as total_degree,
                 coalesce(g.in_degree, 0) as in_degree,
-                coalesce(g.out_degree, 0) as out_degree,
-                coalesce(al.alert_count, 0) as open_alerts
+                coalesce(g.out_degree, 0) as out_degree
             FROM {self._qualify(TABLE_ACCOUNTS)} a
             LEFT JOIN {self._qualify(TABLE_GRAPH_FEATURES)} g ON a.account_id = g.account_id
-            LEFT JOIN (
-                SELECT sender_account_id as acc_id, count(*) as alert_count 
-                FROM {self._qualify_data(TABLE_ALERTS)} 
-                GROUP BY sender_account_id
-            ) al ON a.account_id = al.acc_id
             WHERE a.account_id IN ({id_list_str})
         """
         try:
@@ -1141,30 +1104,17 @@ class DatabricksRepository(RepositoryBase):
             props = node_map.get(a_id, {})
             is_fraud = bool(props.get("is_fraud"))
             tot_deg = int(props.get("total_degree", 0))
-            open_alerts = int(props.get("open_alerts", 0))
-            
-            # Use precomputed attributes directly from Databricks
-            if is_fraud:
-                score = 1.0
-                level = "CRITICAL"
-            elif open_alerts > 0 or len(unique_edges) > 0:
-                score = 0.85 if len(unique_edges) > 0 else 0.70
-                level = "CRITICAL" if score >= 0.85 else "HIGH"
-            else:
-                score = 0.20
-                level = "LOW"
 
+            # Display authentic Databricks fields without inventing a synthetic risk score
             nodes.append({
                 "id": a_id,
                 "label": f"ACC_{a_id}",
                 "country": props.get("country", "US"),
                 "type": props.get("account_type", "I"),
-                "risk_score": score,
-                "risk_level": level,
+                "is_fraud": is_fraud,
                 "total_degree": tot_deg,
                 "in_degree": int(props.get("in_degree", 0)),
                 "out_degree": int(props.get("out_degree", 0)),
-                "open_alerts": open_alerts,
                 "is_root": (a_id == root_account_id)
             })
 
@@ -1249,54 +1199,22 @@ class DatabricksRepository(RepositoryBase):
             run_status = r_info.get("status", "FAILED")
             run_id = r_info.get("run_id", "aml_xgboost_final")
             data_source = "mlflow_rest_api_live"
+            mlflow_available = True
 
-            hyperparameters = {
-                "n_estimators": int(raw_params.get("n_estimators", 300)),
-                "max_depth": int(raw_params.get("max_depth", 6)),
-                "learning_rate": float(raw_params.get("learning_rate", 0.05)),
-                "subsample": float(raw_params.get("subsample", 0.8)),
-                "colsample_bytree": float(raw_params.get("colsample_bytree", 0.8)),
-                "scale_pos_weight": float(raw_params.get("scale_pos_weight", 20.35)),
-                "negative_to_positive_ratio": raw_params.get("negative_to_positive_ratio", "20:1"),
-                "classification_threshold": float(raw_params.get("classification_threshold", 0.98))
-            }
-            metrics = {
-                "accuracy": raw_metrics.get("accuracy", 0.988),
-                "recall": raw_metrics.get("recall", 0.909),
-                "precision": raw_metrics.get("precision", 0.095),
-                "f1_score": raw_metrics.get("f1_score", 0.172),
-                "roc_auc": raw_metrics.get("roc_auc", 0.997),
-                "pr_auc": raw_metrics.get("pr_auc", 0.839),
-                "threshold": float(raw_params.get("classification_threshold", 0.98))
-            }
+            hyperparameters = {k: v for k, v in raw_params.items()}
+            metrics = {k: v for k, v in raw_metrics.items()}
         else:
-            # Baseline recorded from actual MLflow run aml_xgboost_final (Experiment 3299782125965871)
-            run_status = "FAILED"
-            run_id = "aml_xgboost_final"
-            data_source = "mlflow_run_baseline"
-            hyperparameters = {
-                "n_estimators": 300,
-                "max_depth": 6,
-                "learning_rate": 0.05,
-                "subsample": 0.8,
-                "colsample_bytree": 0.8,
-                "scale_pos_weight": 20.35,
-                "negative_to_positive_ratio": "20:1",
-                "classification_threshold": 0.98
-            }
-            metrics = {
-                "accuracy": 0.988,
-                "recall": 0.909,
-                "precision": 0.095,
-                "f1_score": 0.172,
-                "roc_auc": 0.997,
-                "pr_auc": 0.839,
-                "threshold": 0.98
-            }
+            # When MLflow cannot be reached, do not fabricate fallback metrics
+            run_status = "UNAVAILABLE"
+            run_id = None
+            data_source = "mlflow_unavailable"
+            mlflow_available = False
+            hyperparameters = {}
+            metrics = {}
 
         return {
             "model_name": "XGBoost AML Fraud Classifier",
-            "model_version": run_id,
+            "model_version": run_id or "aml_xgboost_final",
             "model_type": "Gradient Boosted Decision Trees (XGBoost)",
             "experiment_name": "/Shared/AML_POC_XGBoost",
             "experiment_id": exp_id,
@@ -1304,6 +1222,7 @@ class DatabricksRepository(RepositoryBase):
             "run_id": run_id,
             "run_status": run_status,
             "data_source": data_source,
+            "mlflow_available": mlflow_available,
             "owner": "zs7919320@gmail.com",
             "target_column": "label",
             "feature_count": 27,
@@ -1316,22 +1235,8 @@ class DatabricksRepository(RepositoryBase):
                 "imbalance_ratio": imbalance_ratio
             },
             "metrics": metrics,
-            "confusion_matrix": {
-                "true_negative": 261763,
-                "false_positive": 2372,
-                "false_negative": 25,
-                "true_positive": 249
-            },
-            "feature_importance": [
-                {"feature": "tx_amount", "importance": 0.24, "category": "Transaction"},
-                {"feature": "sender_velocity_count", "importance": 0.18, "category": "Velocity"},
-                {"feature": "receiver_velocity_count", "importance": 0.14, "category": "Velocity"},
-                {"feature": "fan_in_feature", "importance": 0.13, "category": "Topology"},
-                {"feature": "cycle_count", "importance": 0.11, "category": "Topology"},
-                {"feature": "unique_receivers_count", "importance": 0.09, "category": "Velocity"},
-                {"feature": "step_hour", "importance": 0.05, "category": "Temporal"},
-                {"feature": "is_flagged_fraud", "importance": 0.06, "category": "Rules"}
-            ]
+            "confusion_matrix": None,
+            "feature_importance": []
         }
 
     # =========================================================================
