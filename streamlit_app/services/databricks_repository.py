@@ -110,11 +110,11 @@ class DatabricksRepository(RepositoryBase):
             self.client.execute_statement(
                 f"""
                 CREATE TABLE IF NOT EXISTS {self._qualify_app(TABLE_ALERT_COMMENTS)} (
-                    id BIGINT,
+                    comment_id BIGINT,
                     alert_id BIGINT,
-                    user_id STRING,
+                    created_by STRING,
                     comment_text STRING,
-                    created_at STRING
+                    created_timestamp STRING
                 )
                 """
             )
@@ -438,10 +438,33 @@ class DatabricksRepository(RepositoryBase):
         normalized_rule_score = min(1.0, rule_score_total / 100.0)
         risk_score = round(0.40 * normalized_rule_score + 0.60 * ml_prob, 2)
 
+        rule_reason = f"Rules: {rule_evidence_str}" if rule_names else "Standard limits respected"
+        graph_reason = f"Graph Pattern: {graph_label}" if graph_triggered else "Acyclic standard vertex transfer"
+        ml_reason = f"XGBoost Suspicion Probability: {ml_prob*100:.1f}%" if ml_prob >= 0.50 else "Low ML anomaly probability"
+
+        rule_det = {
+            "triggered": len(rule_names) > 0,
+            "reason": rule_reason,
+            "label": rule_evidence_str,
+            "score": normalized_rule_score
+        }
+        graph_det = {
+            "triggered": graph_triggered,
+            "reason": graph_reason,
+            "label": graph_label
+        }
+        ml_det = {
+            "triggered": ml_prob >= 0.50,
+            "reason": ml_reason,
+            "label": f"ML Probability: {ml_prob:.2f}",
+            "probability": ml_prob
+        }
+
         row["detectors"] = {
-            "rule_engine": {"triggered": len(rule_names) > 0, "label": rule_evidence_str},
-            "graph_analysis": {"triggered": graph_triggered, "label": graph_label},
-            "machine_learning": {"triggered": ml_prob >= 0.70, "label": f"ML Probability: {ml_prob:.2f}"}
+            "rule_engine": rule_det,
+            "graph_analysis": graph_det,
+            "ml_model": ml_det,
+            "machine_learning": ml_det
         }
         row["RULE_SCORE"] = normalized_rule_score
         row["ML_PROBABILITY"] = ml_prob
@@ -603,13 +626,39 @@ class DatabricksRepository(RepositoryBase):
     def _get_alert_comments(self, alert_id: int) -> List[Dict[str, Any]]:
         if self._persistence_mode == "databricks":
             try:
-                df = self.client.execute_query(
-                    f"SELECT id, alert_id, user_id, comment_text, created_at FROM {self._qualify_app(TABLE_ALERT_COMMENTS)} WHERE alert_id = {alert_id} ORDER BY created_at ASC"
-                )
+                try:
+                    df = self.client.execute_query(
+                        f"""
+                        SELECT 
+                            comment_id as id,
+                            comment_id,
+                            alert_id,
+                            created_by as user_id,
+                            created_by,
+                            comment_text,
+                            created_timestamp as created_at,
+                            created_timestamp as timestamp,
+                            created_timestamp
+                        FROM {self._qualify_app(TABLE_ALERT_COMMENTS)} 
+                        WHERE alert_id = {alert_id} 
+                        ORDER BY created_timestamp ASC
+                        """
+                    )
+                except Exception:
+                    df = self.client.execute_query(
+                        f"SELECT * FROM {self._qualify_app(TABLE_ALERT_COMMENTS)} WHERE alert_id = {alert_id}"
+                    )
                 if not df.empty:
+                    if "created_by" in df.columns and "user_id" not in df.columns:
+                        df["user_id"] = df["created_by"]
+                    if "created_timestamp" in df.columns and "timestamp" not in df.columns:
+                        df["timestamp"] = df["created_timestamp"]
+                        df["created_at"] = df["created_timestamp"]
+                    if "comment_id" in df.columns and "id" not in df.columns:
+                        df["id"] = df["comment_id"]
                     return df.to_dict(orient="records")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Error querying alert comments: {e}")
         return [c for c in self._session_comments if c.get("alert_id") == alert_id]
 
     def _get_alert_audit(self, alert_id: int) -> List[Dict[str, Any]]:
@@ -731,24 +780,36 @@ class DatabricksRepository(RepositoryBase):
         clean_text = comment_text.strip().replace("'", "''")
 
         if self._persistence_mode == "databricks":
+            c_id = int(datetime.now().timestamp())
             try:
-                c_id = int(datetime.now().timestamp())
                 self.client.execute_statement(
                     f"""
-                    INSERT INTO {self._qualify_app(TABLE_ALERT_COMMENTS)} (id, alert_id, user_id, comment_text, created_at)
+                    INSERT INTO {self._qualify_app(TABLE_ALERT_COMMENTS)} (comment_id, alert_id, created_by, comment_text, created_timestamp)
                     VALUES ({c_id}, {alert_id}, '{user_id}', '{clean_text}', '{now}')
                     """
                 )
-            except Exception as e:
-                logger.warning(f"Could not persist comment to Databricks: {e}")
+            except Exception:
+                try:
+                    self.client.execute_statement(
+                        f"""
+                        INSERT INTO {self._qualify_app(TABLE_ALERT_COMMENTS)} (id, alert_id, user_id, comment_text, created_at)
+                        VALUES ({c_id}, {alert_id}, '{user_id}', '{clean_text}', '{now}')
+                        """
+                    )
+                except Exception as e:
+                    logger.warning(f"Could not persist comment to Databricks: {e}")
             self._persist_audit_log(user_id, "ADD_COMMENT", str(alert_id), None, clean_text[:40], now)
 
         self._session_comments.append({
             "id": len(self._session_comments) + 1,
+            "comment_id": len(self._session_comments) + 1,
             "alert_id": alert_id,
             "user_id": user_id,
+            "created_by": user_id,
             "comment_text": comment_text.strip(),
-            "created_at": now
+            "created_at": now,
+            "timestamp": now,
+            "created_timestamp": now
         })
         self._session_audit_log.append({
             "audit_id": len(self._session_audit_log) + 1,

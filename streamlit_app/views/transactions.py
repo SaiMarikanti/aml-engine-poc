@@ -255,14 +255,18 @@ def render_transaction_details(tx_id: int, pages_map: dict):
         """, unsafe_allow_html=True)
 
     st.write("")
-    det = tx["detectors"]
+    det = tx.get("detectors", {})
+    re_det = det.get("rule_engine", {})
+    ga_det = det.get("graph_analysis", {})
+    ml_det = det.get("ml_model") or det.get("machine_learning", {})
+
     cd1, cd2, cd3 = st.columns(3)
     with cd1:
-        st.markdown(render_evidence_chip("Rule Engine", det["rule_engine"]["triggered"], det["rule_engine"]["reason"]), unsafe_allow_html=True)
+        st.markdown(render_evidence_chip("Rule Engine", re_det.get("triggered", False), re_det.get("reason") or re_det.get("label", "Standard limits respected")), unsafe_allow_html=True)
     with cd2:
-        st.markdown(render_evidence_chip("Graph Analysis", det["graph_analysis"]["triggered"], det["graph_analysis"]["reason"]), unsafe_allow_html=True)
+        st.markdown(render_evidence_chip("Graph Analysis", ga_det.get("triggered", False), ga_det.get("reason") or ga_det.get("label", "Acyclic standard vertex transfer")), unsafe_allow_html=True)
     with cd3:
-        st.markdown(render_evidence_chip("ML Model (XGBoost)", det["ml_model"]["triggered"], det["ml_model"]["reason"]), unsafe_allow_html=True)
+        st.markdown(render_evidence_chip("ML Model (XGBoost)", ml_det.get("triggered", False), ml_det.get("reason") or ml_det.get("label", "Low ML anomaly probability")), unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Investigator Navigation Actions

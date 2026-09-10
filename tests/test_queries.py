@@ -22,6 +22,10 @@ def test_get_transaction_details_deterministic():
     assert tx is not None
     assert tx["TX_ID"] == 82
     assert "detectors" in tx
+    det = tx["detectors"]
+    assert "rule_engine" in det and "reason" in det["rule_engine"]
+    assert "graph_analysis" in det and "reason" in det["graph_analysis"]
+    assert "ml_model" in det and "reason" in det["ml_model"]
     assert "RULE_SCORE" in tx
     assert "ML_PROBABILITY" in tx
     assert "RISK_SCORE" in tx
