@@ -227,11 +227,11 @@ class DatabricksRepository(RepositoryBase):
         alert_table = self._qualify_data(TABLE_ALERTS)
         sql = f"""
             SELECT 
-                to_date(timestamp) as time_step, 
+                to_date(event_time) as time_step, 
                 count(*) as alert_count, 
                 sum(tx_amount) as total_amount
             FROM {alert_table}
-            GROUP BY to_date(timestamp)
+            GROUP BY to_date(event_time)
             ORDER BY time_step ASC
             LIMIT 30
         """
@@ -364,7 +364,7 @@ class DatabricksRepository(RepositoryBase):
                     receiver_account_id as RECEIVER_ACCOUNT_ID,
                     tx_type as TX_TYPE,
                     tx_amount as TX_AMOUNT,
-                    timestamp as TIMESTAMP,
+                    event_time as TIMESTAMP,
                     is_fraud as IS_FRAUD,
                     alert_id as ALERT_ID
                 FROM {tx_table}
@@ -388,7 +388,7 @@ class DatabricksRepository(RepositoryBase):
                 receiver_account_id as RECEIVER_ACCOUNT_ID,
                 tx_type as TX_TYPE,
                 tx_amount as TX_AMOUNT,
-                timestamp as TIMESTAMP,
+                event_time as TIMESTAMP,
                 is_fraud as IS_FRAUD,
                 alert_id as ALERT_ID
             FROM {tx_table}
@@ -469,7 +469,8 @@ class DatabricksRepository(RepositoryBase):
                 a.receiver_account_id as RECEIVER_ACCOUNT_ID,
                 a.alert_type as ALERT_TYPE,
                 a.tx_amount as TX_AMOUNT,
-                a.timestamp as TIMESTAMP,
+                a.event_time as TIMESTAMP,
+                a.event_time as EVENT_TIME,
                 a.is_fraud as IS_FRAUD,
                 coalesce(r.rule_score, 0) as RULE_SCORE,
                 r.triggered_rules as TRIGGERED_RULES,
@@ -490,7 +491,7 @@ class DatabricksRepository(RepositoryBase):
                 END) as DETECTION_ENGINE,
                 'OPEN' as STATUS,
                 'Unassigned' as ASSIGNED_TO,
-                a.timestamp as UPDATED_TIMESTAMP
+                a.event_time as UPDATED_TIMESTAMP
             FROM {self._qualify_data(TABLE_ALERTS)} a
             LEFT JOIN {self._qualify_data(TABLE_RULE_SCORES)} r ON a.tx_id = r.tx_id
             ORDER BY a.alert_id DESC
@@ -533,7 +534,8 @@ class DatabricksRepository(RepositoryBase):
                 a.receiver_account_id as RECEIVER_ACCOUNT_ID,
                 a.alert_type as ALERT_TYPE,
                 a.tx_amount as TX_AMOUNT,
-                a.timestamp as TIMESTAMP,
+                a.event_time as TIMESTAMP,
+                a.event_time as EVENT_TIME,
                 a.is_fraud as IS_FRAUD,
                 coalesce(r.rule_score, 0) as RULE_SCORE,
                 r.triggered_rules as TRIGGERED_RULES,
@@ -554,7 +556,7 @@ class DatabricksRepository(RepositoryBase):
                 END) as DETECTION_ENGINE,
                 'OPEN' as STATUS,
                 'Unassigned' as ASSIGNED_TO,
-                a.timestamp as UPDATED_TIMESTAMP
+                a.event_time as UPDATED_TIMESTAMP
             FROM {self._qualify_data(TABLE_ALERTS)} a
             LEFT JOIN {self._qualify_data(TABLE_RULE_SCORES)} r ON a.tx_id = r.tx_id
             WHERE a.alert_id = {alert_id}
