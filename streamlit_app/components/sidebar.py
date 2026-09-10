@@ -1,9 +1,15 @@
-"""Custom Neumorphic Sidebar Navigation Shell for Databricks AML Platform."""
+"""Custom Pure Neumorphic Sidebar Navigation Shell for Databricks AML Platform."""
 import streamlit as st
 from typing import Dict, Any, Optional
 
+try:
+    from config.settings import settings
+except (ImportError, ModuleNotFoundError):
+    from aml_app.config.settings import settings
+
+
 def render_sidebar(current_page: Optional[Any] = None, pages_map: Optional[Dict[str, Any]] = None):
-    """Render the unified Neumorphic sidebar navigation.
+    """Render the pure Neumorphic sidebar navigation.
     
     Args:
         current_page: The active st.Page object returned by st.navigation()
@@ -13,23 +19,25 @@ def render_sidebar(current_page: Optional[Any] = None, pages_map: Optional[Dict[
     pages = pages_map or {}
 
     with st.sidebar:
-        # 1. Branding Header
-        st.markdown("""
-            <div style="padding: 10px 8px 18px 8px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 36px; height: 36px; border-radius: 9px; background: #1E3A8A; 
-                                display: flex; align-items: center; justify-content: center; color: white; font-size: 1.15rem; font-weight: 800;
-                                box-shadow: 3px 3px 6px #C5CBD4, -3px -3px 6px #FFFFFF;">
+        # 1. Branding Header - Soft Raised Panel
+        st.markdown(f"""
+            <div class="neo-sidebar-brand">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="neo-sidebar-brand-icon">
                         🛡️
                     </div>
                     <div>
                         <div style="font-size: 1.05rem; font-weight: 800; color: #1E3A8A; letter-spacing: -0.01em; line-height: 1.2;">
-                            AML INTELLIGENCE
+                            AML ENGINE
                         </div>
-                        <div style="font-size: 0.72rem; color: #68707A; font-weight: 500; letter-spacing: 0.02em;">
-                            Lakehouse Surveillance
+                        <div style="font-size: 0.72rem; color: #64748B; font-weight: 600; letter-spacing: 0.02em;">
+                            Lakehouse Intelligence
                         </div>
                     </div>
+                </div>
+                <div class="neo-sidebar-pill">
+                    <span style="color: #1E3A8A; font-weight: 700;">👤 {settings.CURRENT_USER}</span>
+                    <span style="color: #059669; font-weight: 700;">● Online</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -46,35 +54,48 @@ def render_sidebar(current_page: Optional[Any] = None, pages_map: Optional[Dict[
 
         # Section 1: HOME
         st.markdown('<div class="neo-sidebar-header">HOME</div>', unsafe_allow_html=True)
-        nav_button("Dashboard", "◼", "dashboard")
+        nav_button("Dashboard", "📊", "dashboard")
 
         # Section 2: INVESTIGATION
+        st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">INVESTIGATION</div>', unsafe_allow_html=True)
-        nav_button("Transactions", "▣", "transactions")
-        nav_button("Alerts", "!", "alerts")
-        nav_button("Accounts", "●", "accounts")
-        nav_button("Network", "◈", "network")
+        nav_button("Transactions", "💳", "transactions")
+        nav_button("Alerts", "🚨", "alerts")
+        nav_button("Accounts", "🏢", "accounts")
+        nav_button("Network", "🕸️", "network")
 
         # Section 3: INTELLIGENCE
+        st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">INTELLIGENCE</div>', unsafe_allow_html=True)
-        nav_button("Model Insights", "◫", "model_insights")
+        nav_button("Model Insights", "🧠", "model_insights")
 
         # Section 4: ADMINISTRATION
+        st.markdown('<div class="neo-sidebar-groove"></div>', unsafe_allow_html=True)
         st.markdown('<div class="neo-sidebar-header">ADMINISTRATION</div>', unsafe_allow_html=True)
-        nav_button("Audit Log", "◇", "audit")
-        nav_button("System Status", "⚙", "system_status")
+        nav_button("Audit Log", "📋", "audit")
+        nav_button("System Status", "⚡", "system_status")
 
-        # Bottom Widget: Databricks Lakehouse Health Status
-        st.markdown("""
+        # Bottom Widget: Databricks Lakehouse Health Status Plate
+        st.markdown(f"""
             <div class="neo-lakehouse-status">
-                <div class="brand-title">DATABRICKS LAKEHOUSE</div>
-                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
-                    <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #059669;">
-                        <span style="font-size: 0.7rem;">●</span> SQL Warehouse
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 6px; font-weight: 600; color: #059669;">
-                        <span style="font-size: 0.7rem;">●</span> Data Connected
-                    </div>
+                <div class="brand-title">DATABRICKS PLATFORM</div>
+                <div class="neo-status-row">
+                    <span style="font-weight: 600; color: #334155;">
+                        <span class="neo-status-dot"></span>SQL Warehouse
+                    </span>
+                    <span style="font-weight: 700; color: #059669;">Ready</span>
+                </div>
+                <div class="neo-status-row">
+                    <span style="font-weight: 600; color: #334155;">
+                        <span class="neo-status-dot"></span>Data ({settings.DATA_SCHEMA})
+                    </span>
+                    <span style="font-weight: 700; color: #059669;">SELECT</span>
+                </div>
+                <div class="neo-status-row">
+                    <span style="font-weight: 600; color: #334155;">
+                        <span class="neo-status-dot"></span>App ({settings.APP_SCHEMA})
+                    </span>
+                    <span style="font-weight: 700; color: #1E3A8A;">MODIFY</span>
                 </div>
             </div>
         """, unsafe_allow_html=True)
